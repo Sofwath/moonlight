@@ -12,8 +12,9 @@ This directory contains the runtime data files for Moonlight. It is not committe
 
 ## Building `moonlight.db`
 
-**From a kahzaabu database (fastest):**
+**From a [kahzaabu](https://github.com/Sofwath/kahzaabu) database (fastest):**
 ```bash
+# Clone kahzaabu and build kahzaabu.db per its README, then:
 python -m moonlight.corpus import --source /path/to/kahzaabu.db --out data/moonlight.db
 python -m moonlight.corpus embed --db data/moonlight.db
 ```

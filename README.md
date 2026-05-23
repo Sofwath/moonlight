@@ -102,7 +102,7 @@ The kahzaabu fact-checking pipeline needs translation as a sub-step — it reads
 ### Prerequisites
 
 - Python 3.11+
-- A kahzaabu SQLite database (for corpus import) **or** a pre-built `moonlight.db`
+- A [kahzaabu](https://github.com/Sofwath/kahzaabu) SQLite database (for corpus import) **or** a pre-built `moonlight.db`
 - An Anthropic API key (or compatible frontier LLM endpoint)
 
 ### Installation
@@ -116,9 +116,11 @@ pip install -e ".[dev]"
 
 ### Build the corpus database
 
-> If you have a kahzaabu DB (`kahzaabu.db`), import from it:
+> If you have a [kahzaabu](https://github.com/Sofwath/kahzaabu) DB (`kahzaabu.db`), import from it.
+> The kahzaabu DB contains the full paired EN+DV Presidency Office corpus and is the fastest way to get started.
 
 ```bash
+# Clone kahzaabu and follow its README to build kahzaabu.db, then:
 python scripts/import_from_kahzaabu.py --source /path/to/kahzaabu.db
 # Default output: data/moonlight.db
 ```

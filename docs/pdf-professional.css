@@ -1,0 +1,109 @@
+@page {
+  size: A4;
+  margin: 1in;
+  @bottom-right {
+    content: counter(page);
+    color: #666;
+    font-size: 9pt;
+  }
+}
+
+html {
+  color: #1a1a1a;
+  font-family: "Inter", "Segoe UI", "Noto Sans", "Noto Sans Thaana", "Arial Unicode MS", sans-serif;
+  font-size: 11pt;
+  line-height: 1.55;
+}
+
+body {
+  max-width: 8.27in;
+  margin: 0 auto;
+}
+
+h1, h2, h3, h4 {
+  color: #0f2742;
+  line-height: 1.25;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+}
+
+h1 {
+  font-size: 20pt;
+  border-bottom: 1px solid #d5dce5;
+  padding-bottom: 0.25em;
+}
+
+h2 { font-size: 15pt; }
+h3 { font-size: 12.5pt; }
+h4 { font-size: 11.5pt; }
+
+p {
+  margin: 0.55em 0;
+  text-align: justify;
+}
+
+ul, ol {
+  margin-top: 0.35em;
+  margin-bottom: 0.75em;
+}
+
+li + li {
+  margin-top: 0.2em;
+}
+
+a {
+  color: #0b5394;
+  text-decoration: none;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #d5dce5;
+  margin: 1.1em 0;
+}
+
+blockquote {
+  border-left: 3px solid #d5dce5;
+  margin: 0.8em 0;
+  padding: 0.2em 0.9em;
+  color: #303841;
+}
+
+code, pre {
+  font-family: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+  font-size: 9.6pt;
+}
+
+pre {
+  background: #f4f7fb;
+  border: 1px solid #dfe7f1;
+  border-radius: 5px;
+  padding: 0.7em 0.85em;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8em 0 1em;
+}
+
+th, td {
+  border: 1px solid #d9e1ea;
+  padding: 0.45em 0.6em;
+  vertical-align: top;
+}
+
+th {
+  background: #edf3f9;
+  font-weight: 600;
+}
+
+img {
+  max-width: 100%;
+}
+
+/* Keep headings with immediate following paragraph/list. */
+h2, h3, h4 {
+  page-break-after: avoid;
+}

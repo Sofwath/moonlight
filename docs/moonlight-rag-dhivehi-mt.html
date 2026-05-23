@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Moonlight: Retrieval-Augmented Generation for Domain-Specific English–Dhivehi Machine Translation</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="/Users/sofwath/Developer/myLabs/moonlight/docs/pdf-professional.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Moonlight: Retrieval-Augmented Generation for
+Domain-Specific English–Dhivehi Machine Translation</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a
+href="#moonlight-retrieval-augmented-generation-for-domain-specific-englishdhivehi-machine-translation"
+id="toc-moonlight-retrieval-augmented-generation-for-domain-specific-englishdhivehi-machine-translation"><span
+class="toc-section-number">1</span> Moonlight: Retrieval-Augmented
+Generation for Domain-Specific English–Dhivehi Machine Translation</a>
+<ul>
+<li><a href="#abstract" id="toc-abstract"><span
+class="toc-section-number">1.1</span> Abstract</a></li>
+<li><a href="#introduction" id="toc-introduction"><span
+class="toc-section-number">1.2</span> 1. Introduction</a></li>
+<li><a href="#related-work" id="toc-related-work"><span
+class="toc-section-number">1.3</span> 2. Related Work</a></li>
+<li><a href="#system-description" id="toc-system-description"><span
+class="toc-section-number">1.4</span> 3. System Description</a>
+<ul>
+<li><a href="#corpus" id="toc-corpus"><span
+class="toc-section-number">1.4.1</span> 3.1 Corpus</a></li>
+<li><a href="#pipeline" id="toc-pipeline"><span
+class="toc-section-number">1.4.2</span> 3.2 Pipeline</a></li>
+<li><a href="#leak-prevention" id="toc-leak-prevention"><span
+class="toc-section-number">1.4.3</span> 3.3 Leak prevention</a></li>
+<li><a href="#no-fine-tuning" id="toc-no-fine-tuning"><span
+class="toc-section-number">1.4.4</span> 3.4 No fine-tuning</a></li>
+</ul></li>
+<li><a href="#evaluation" id="toc-evaluation"><span
+class="toc-section-number">1.5</span> 4. Evaluation</a>
+<ul>
+<li><a href="#experimental-conditions"
+id="toc-experimental-conditions"><span
+class="toc-section-number">1.5.1</span> 4.1 Experimental
+conditions</a></li>
+<li><a href="#test-article" id="toc-test-article"><span
+class="toc-section-number">1.5.2</span> 4.2 Test article</a></li>
+<li><a href="#models" id="toc-models"><span
+class="toc-section-number">1.5.3</span> 4.3 Models</a></li>
+<li><a href="#metrics" id="toc-metrics"><span
+class="toc-section-number">1.5.4</span> 4.4 Metrics</a></li>
+</ul></li>
+<li><a href="#results" id="toc-results"><span
+class="toc-section-number">1.6</span> 5. Results</a>
+<ul>
+<li><a href="#summary-chrf-primary-metric"
+id="toc-summary-chrf-primary-metric"><span
+class="toc-section-number">1.6.1</span> 5.1 Summary — chrF (primary
+metric)</a></li>
+<li><a href="#bleu-comparison" id="toc-bleu-comparison"><span
+class="toc-section-number">1.6.2</span> 5.2 BLEU comparison</a></li>
+<li><a href="#provenance-at-condition-c"
+id="toc-provenance-at-condition-c"><span
+class="toc-section-number">1.6.3</span> 5.3 Provenance at condition
+C</a></li>
+</ul></li>
+<li><a href="#analysis" id="toc-analysis"><span
+class="toc-section-number">1.7</span> 6. Analysis</a>
+<ul>
+<li><a
+href="#corpus-retrieval-dominates-over-prompt-engineering-for-mid-tier-models"
+id="toc-corpus-retrieval-dominates-over-prompt-engineering-for-mid-tier-models"><span
+class="toc-section-number">1.7.1</span> 6.1 Corpus retrieval dominates
+over prompt engineering — for mid-tier models</a></li>
+<li><a
+href="#endv-benefits-more-from-corpus-retrieval-than-dven-series-1"
+id="toc-endv-benefits-more-from-corpus-retrieval-than-dven-series-1"><span
+class="toc-section-number">1.7.2</span> 6.2 EN→DV benefits more from
+corpus retrieval than DV→EN (Series 1)</a></li>
+<li><a
+href="#gemini-flash-2.0-nocorp-endv-a-system-prompt-interaction-effect-series-1"
+id="toc-gemini-flash-2.0-nocorp-endv-a-system-prompt-interaction-effect-series-1"><span
+class="toc-section-number">1.7.3</span> 6.3 Gemini Flash 2.0 nocorp
+EN→DV: a system-prompt interaction effect (Series 1)</a></li>
+<li><a
+href="#inverse-relationship-between-baseline-capability-and-pipeline-gain"
+id="toc-inverse-relationship-between-baseline-capability-and-pipeline-gain"><span
+class="toc-section-number">1.7.4</span> 6.4 Inverse relationship between
+baseline capability and pipeline gain</a></li>
+<li><a href="#gpt-5.5-the-largest-prompt-engineering-gain-ab"
+id="toc-gpt-5.5-the-largest-prompt-engineering-gain-ab"><span
+class="toc-section-number">1.7.5</span> 6.5 GPT-5.5: the largest
+prompt-engineering gain (A→B)</a></li>
+<li><a
+href="#prompt-format-compatibility-failure-gemini-3.5-flash-endv-series-2"
+id="toc-prompt-format-compatibility-failure-gemini-3.5-flash-endv-series-2"><span
+class="toc-section-number">1.7.6</span> 6.6 Prompt-format compatibility
+failure: Gemini 3.5 Flash EN→DV (Series 2)</a></li>
+<li><a href="#cross-series-baseline-progression"
+id="toc-cross-series-baseline-progression"><span
+class="toc-section-number">1.7.7</span> 6.7 Cross-series baseline
+progression</a></li>
+<li><a href="#qualitative-observation-h.e.-transliteration"
+id="toc-qualitative-observation-h.e.-transliteration"><span
+class="toc-section-number">1.7.8</span> 6.8 Qualitative observation:
+H.E. transliteration</a></li>
+</ul></li>
+<li><a href="#limitations" id="toc-limitations"><span
+class="toc-section-number">1.8</span> 7. Limitations</a></li>
+<li><a href="#conclusion" id="toc-conclusion"><span
+class="toc-section-number">1.9</span> 8. Conclusion</a></li>
+<li><a href="#references" id="toc-references"><span
+class="toc-section-number">1.10</span> References</a></li>
+<li><a href="#appendix-a-reproduced-translations"
+id="toc-appendix-a-reproduced-translations"><span
+class="toc-section-number">1.11</span> Appendix A: Reproduced
+translations</a></li>
+<li><a href="#appendix-b-reproducing-this-evaluation"
+id="toc-appendix-b-reproducing-this-evaluation"><span
+class="toc-section-number">1.12</span> Appendix B: Reproducing this
+evaluation</a></li>
+<li><a href="#appendix-c-citation" id="toc-appendix-c-citation"><span
+class="toc-section-number">1.13</span> Appendix C: Citation</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 data-number="1"
+id="moonlight-retrieval-augmented-generation-for-domain-specific-englishdhivehi-machine-translation"><span
+class="header-section-number">1</span> Moonlight: Retrieval-Augmented
+Generation for Domain-Specific English–Dhivehi Machine Translation</h1>
+<p><strong>Sofwathullah Mohamed</strong><br />
+Independent Researcher<br />
+Sofwathullah.Mohamed@gmail.com</p>
+<hr />
+<h2 data-number="1.1" id="abstract"><span
+class="header-section-number">1.1</span> Abstract</h2>
+<p>We present Moonlight, a retrieval-augmented generation (RAG) system
+for English–Dhivehi (EN↔︎DV) machine translation targeting the formal
+register of the Maldives Presidency Office (PO). Dhivehi is a
+morphologically rich, low-resource language written in Thaana script;
+general-purpose machine translation systems produce output that is
+semantically reasonable but tonally incorrect for official institutional
+contexts. Moonlight grounds every translation request in a corpus of
+2,648 paired EN↔︎DV press releases published by the PO, injecting
+domain-specific terminology, sentence-level translation memory, and full
+article exemplars into a structured four-layer prompt without
+fine-tuning any model weights. We evaluate three conditions — a raw-LLM
+baseline (A), the full pipeline with an empty database (B), and the full
+pipeline with a populated corpus (C) — across five frontier LLMs and
+both translation directions. With mid-tier models (Claude Sonnet 4.6,
+Gemini Flash 2.0), corpus retrieval (B→C) is the dominant source of
+improvement: up to +7.8 chrF for EN→DV. With more capable successors
+(Claude Opus 4.7, Gemini 3.5 Flash), diminishing returns appear: Claude
+Opus 4.7’s baselines are already 3–8 chrF higher than Sonnet’s, leaving
+little room for further gain; Gemini 3.5 Flash reveals a severe
+prompt-format compatibility failure in EN→DV caused by the pipeline’s
+phrase-context injection format being echoed as output. GPT-5.5, with
+the weakest Dhivehi baseline in the study (31.0 chrF EN→DV), shows the
+largest total gain: +24.9 chrF A→C, with prompt engineering alone (A→B)
+contributing +17.1 — the largest single-stage improvement observed. We
+discuss how pipeline value is inversely proportional to model baseline
+Dhivehi capability, the critical importance of validating prompt format
+compatibility across model families, and the implications for operators
+choosing between model upgrade and retrieval investment.</p>
+<hr />
+<h2 data-number="1.2" id="introduction"><span
+class="header-section-number">1.2</span> 1. Introduction</h2>
+<p>Dhivehi is the official language of the Republic of Maldives, spoken
+by approximately 500,000 people. It is written in Thaana script (Unicode
+block U+0780–U+07BF), a right-to-left abugida with 24 letters and a
+diacritic vowel system. The formal written register used in government
+communications diverges substantially from everyday spoken Dhivehi:
+agglutinative suffix chains are longer, Arabic and Farsi loanwords are
+preferred over native roots for governance vocabulary, and specific
+honorific formulae govern how titles and names appear in formal
+text.</p>
+<p>The Maldives Presidency Office publishes every press release, speech,
+decree, and amendment in both English and Dhivehi at a stable URL pair
+sharing a canonical article ID. This structure makes the corpus
+naturally parallel at article level. Over the period 2019 to present,
+the PO has published approximately 2,648 paired article pairs, totalling
+roughly 2.1M EN tokens and 1.9M DV tokens.</p>
+<p>The problem we address is a gap that standard machine translation
+systems leave open: producing Dhivehi output that a Maldivian government
+official would consider register-correct. A translation of a condolence
+message that uses <code>ތައުޒިޔާ</code> (informal romanisation in Thaana)
+instead of <code>ތަޢުޒިޔާ</code> (the PO convention with Arabic-derived
+diacritics) is technically intelligible but institutionally wrong.
+Inconsistent transliteration of a minister’s name across a press release
+reflects poorly on the publishing body. These are not errors that a
+general-purpose MT system trained on broad web data is equipped to
+avoid.</p>
+<p>Our contribution is fourfold:</p>
+<ol type="1">
+<li>A retrieval-augmented translation pipeline (Moonlight) that uses the
+PO’s own published output as a translation memory, without fine-tuning
+any model.</li>
+<li>A three-condition ablation methodology that cleanly separates the
+value of prompt engineering (A→B) from the value of corpus retrieval
+(B→C).</li>
+<li>Empirical results across five frontier LLMs (Claude Sonnet 4.6,
+Claude Opus 4.7, Gemini Flash 2.0, Gemini 3.5 Flash, GPT-5.5) showing
+that pipeline value is inversely proportional to model baseline Dhivehi
+capability — weakest models gain most; strongest models show diminishing
+returns.</li>
+<li>An empirical demonstration of prompt-format compatibility failure:
+the same phrase-context injection format that works correctly with
+Claude and Gemini Flash 2.0 causes Gemini 3.5 Flash to echo the prompt
+structure as output, destroying EN→DV translation quality.</li>
+</ol>
+<hr />
+<h2 data-number="1.3" id="related-work"><span
+class="header-section-number">1.3</span> 2. Related Work</h2>
+<p><strong>Low-resource machine translation.</strong> Dhivehi sits in a
+sparse region of the MT literature. Existing work on Dhivehi MT is
+limited and largely focused on neural systems trained on small parallel
+corpora from religious or news domains (Thottingal, 2022; FLORES-200,
+Costa-jussà et al., 2022). Moonlight does not train a model; it exploits
+the in-context learning capacity of frontier LLMs.</p>
+<p><strong>Retrieval-augmented generation.</strong> RAG systems augment
+LLM inference with retrieved documents (Lewis et al., 2020).
+Applications to MT include retrieving similar sentence pairs as few-shot
+examples (Karpukhin et al., 2020; Agrawal et al., 2022). Agrawal et
+al. (2022) show that fuzzy-match retrieval of sentence pairs
+consistently improves LLM-based translation, particularly in
+domain-specific settings. Moonlight extends this with four hierarchical
+retrieval layers (glossary, sentence TM, phrase context, article
+exemplar) rather than a single retrieval step.</p>
+<p><strong>Domain adaptation without fine-tuning.</strong> Vilar et
+al. (2023) demonstrate that GPT-4 with few-shot examples from a domain
+matches or exceeds fine-tuned systems on several language pairs. Zhu et
+al. (2023) show that terminology injection in the prompt improves domain
+term consistency without weight updates. Both findings are consistent
+with our design choice: a retrieval index is cheaper to maintain and
+update than a fine-tuned checkpoint, particularly when the domain
+(government press releases) evolves continuously.</p>
+<p><strong>Morphologically rich languages and chrF.</strong> Popović
+(2015) introduces chrF, showing that character n-gram F-score correlates
+better with human judgements than BLEU for morphologically rich
+languages where word-level exact match penalises correct but
+morphologically inflected output. This is directly applicable to Thaana,
+where a single word can encode aspect, evidentiality, and politeness
+simultaneously.</p>
+<hr />
+<h2 data-number="1.4" id="system-description"><span
+class="header-section-number">1.4</span> 3. System Description</h2>
+<h3 data-number="1.4.1" id="corpus"><span
+class="header-section-number">1.4.1</span> 3.1 Corpus</h3>
+<p>The corpus is built from paired EN and DV articles published on
+presidency.gov.mv. Articles share a canonical numeric ID; the DV version
+is accessed at <code>?lang=dv</code>. The corpus covers five article
+types: press releases, speeches, vice-presidential speeches, amendments,
+and decrees. After filtering for pairs where both sides have body text
+exceeding 200 characters, the corpus contains 2,648 article pairs.</p>
+<p>A domain glossary of 3,688 term pairs is mined from the corpus using
+a frontier LLM prompted to extract institutional terms, honorifics, and
+place names from a random sample of article pairs. This glossary is the
+most impactful single retrieval artefact for lexical consistency.</p>
+<p>The corpus is stored in a SQLite database with an FTS5 full-text
+search index for BM25 retrieval and an optional embedding index built
+with <code>paraphrase-multilingual-MiniLM-L12-v2</code> for semantic
+retrieval. Hybrid retrieval (BM25 + semantic, fused via Reciprocal Rank
+Fusion) is the default. The evaluation reported here uses BM25 only, as
+embedding indexing was not run over the eval corpus.</p>
+<h3 data-number="1.4.2" id="pipeline"><span
+class="header-section-number">1.4.2</span> 3.2 Pipeline</h3>
+<p>Each translation request passes through four sequential
+prompt-construction layers:</p>
+<p><strong>Layer 1 — System instruction.</strong> A stable persona and
+mode instruction. Two modes exist: <code>faithful</code> (used
+throughout this evaluation) prioritises entity preservation and numeric
+accuracy; <code>po_style</code> prioritises register and structural
+conformity to PO conventions.</p>
+<p><strong>Layer 2 — Glossary injection.</strong> Domain term pairs
+relevant to the input text are retrieved from the glossary by keyword
+overlap. On the condolence test article, 9–11 terms are injected
+(e.g. <code>ތަޢުޒިޔާ</code> / <code>condolences</code>,
+<code>ރައީސުލްޖުމްހޫރިއްޔާ</code> / <code>President of the Republic</code>).</p>
+<p><strong>Layer 3 — Sentence-level translation memory.</strong> For
+each sentence in the input, the 1–2 closest-matching sentences from the
+corpus (by BM25) are retrieved along with their paired translations.
+These are injected as sentence-level examples showing how similar
+phrases have been rendered by PO translators. The format uses
+<code>*Source:*</code> / <code>*Dhivehi:*</code> (or
+<code>*English:*</code>) markdown field labels.</p>
+<p><strong>Layer 4 — Article-level exemplars.</strong> 2–3 full paired
+article bodies from the same genre are retrieved using genre-keyword
+BM25 search and injected as complete few-shot examples. These provide
+structural context: how a PO condolence message opens, how it handles
+names and honorifics, how it closes.</p>
+<p>The retrieval query for article-level exemplars uses the first
+keyword from the genre’s language-appropriate keyword list
+(e.g. <code>ތަޢުޒިޔާ</code> for DV condolences, not the English word
+“condolences”), preventing the AND-logic of FTS5 from over-constraining
+matches when the source and target languages differ.</p>
+<h3 data-number="1.4.3" id="leak-prevention"><span
+class="header-section-number">1.4.3</span> 3.3 Leak prevention</h3>
+<p>In evaluation, the test article is excluded from all retrieval by
+propagating an <code>exclude_article_ids</code> parameter through all
+retrieval functions to a SQL <code>NOT IN</code> clause. This ensures no
+retrieval layer can return the test article’s own paired translation as
+an exemplar.</p>
+<h3 data-number="1.4.4" id="no-fine-tuning"><span
+class="header-section-number">1.4.4</span> 3.4 No fine-tuning</h3>
+<p>Moonlight deliberately does not fine-tune any model. At 2,648 pairs,
+the corpus is large enough to support retrieval-augmented prompting but
+not large enough to reliably improve a frontier model’s Dhivehi
+capability through supervised fine-tuning without overfitting to PO
+style in a narrow way. A retrieval index can be rebuilt overnight; a
+fine-tuned checkpoint cannot.</p>
+<hr />
+<h2 data-number="1.5" id="evaluation"><span
+class="header-section-number">1.5</span> 4. Evaluation</h2>
+<h3 data-number="1.5.1" id="experimental-conditions"><span
+class="header-section-number">1.5.1</span> 4.1 Experimental
+conditions</h3>
+<p>We test three conditions on a held-out article:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>Condition</th>
+<th>What it provides</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A</strong></td>
+<td>Baseline</td>
+<td>Raw LLM. Prompt: <em>“You are a professional translator. Translate
+the following to [language].”</em> No system instruction beyond persona.
+No retrieval.</td>
+</tr>
+<tr>
+<td><strong>B</strong></td>
+<td>Moonlight — no corpus</td>
+<td>Full four-layer pipeline with an <strong>empty database</strong>:
+zero articles, zero glossary terms, zero sentence pairs. Tests the value
+of prompt design alone.</td>
+</tr>
+<tr>
+<td><strong>C</strong></td>
+<td>Moonlight — full corpus</td>
+<td>Full pipeline against 1,000 paired EN+DV article pairs (top 1,000 by
+recency, excluding the test article) plus 3,688 glossary terms. The
+intended production configuration.</td>
+</tr>
+</tbody>
+</table>
+<p>The delta A→B isolates prompt engineering; B→C isolates corpus
+retrieval; A→C is the total gain.</p>
+<h3 data-number="1.5.2" id="test-article"><span
+class="header-section-number">1.5.2</span> 4.2 Test article</h3>
+<p><strong>Article #29734</strong> — <em>The President sends a message
+of condolences following the passing of Namibia’s President</em>
+(published 2024-02-05). EN body: 904 characters. DV body: 1,121
+characters. Genre: condolence press release. This article is
+representative of a high-frequency PO genre and contains the class of
+terminology (honorifics, formal condolence phrases) that is most
+sensitive to register.</p>
+<p>The reference translations are the PO’s own published EN and DV
+versions of the same article — a single-reference ground truth. These
+are not word-for-word literal translations but parallel texts written
+independently in each language’s register.</p>
+<h3 data-number="1.5.3" id="models"><span
+class="header-section-number">1.5.3</span> 4.3 Models</h3>
+<p>Four models were evaluated across two experimental series:</p>
+<p><strong>Series 1 (original):</strong> - <strong>Claude Sonnet
+4.6</strong> (<code>claude-sonnet-4-6</code>) — Anthropic -
+<strong>Gemini Flash 2.0</strong> (<code>gemini-2.0-flash</code>) —
+Google</p>
+<p><strong>Series 2 (upgraded):</strong> - <strong>Claude Opus
+4.7</strong> (<code>claude-opus-4-7</code>) — Anthropic.
+Highest-capability Anthropic model; <code>temperature</code> parameter
+deprecated in this release. - <strong>Gemini 3.5 Flash</strong>
+(<code>gemini-3.5-flash</code>) — Google. Next-generation Flash model
+with 1M context window. - <strong>GPT-5.5</strong>
+(<code>gpt-5.5</code>) — OpenAI. Uses <code>max_completion_tokens</code>
+(not <code>max_tokens</code>) and does not accept a non-default
+temperature value.</p>
+<p>All five models test the same three conditions on the same article,
+allowing direct comparison of pipeline value across capability
+levels.</p>
+<h3 data-number="1.5.4" id="metrics"><span
+class="header-section-number">1.5.4</span> 4.4 Metrics</h3>
+<p><strong>BLEU</strong> (Papineni et al., 2002): corpus BLEU via
+sacrebleu. Word n-gram overlap. Standard MT benchmark; reported for
+comparability, but noisy on a single article.</p>
+<p><strong>chrF</strong> (Popović, 2015): character n-gram F-score via
+sacrebleu. The <strong>primary metric</strong> for this language pair.
+chrF handles Thaana’s morphological richness naturally — a suffix-chain
+that is almost-correct scores proportionally rather than as a complete
+miss. For DV-side scoring, character-level tokenisation is used
+throughout to avoid word-boundary assumptions.</p>
+<p>Scores in the 55–70 chrF range on a single-article evaluation are
+typical for high-quality MT on this domain; the reference is a published
+translation, not a literal rendering.</p>
+<hr />
+<h2 data-number="1.6" id="results"><span
+class="header-section-number">1.6</span> 5. Results</h2>
+<h3 data-number="1.6.1" id="summary-chrf-primary-metric"><span
+class="header-section-number">1.6.1</span> 5.1 Summary — chrF (primary
+metric)</h3>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 16%" />
+<col style="width: 19%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 7%" />
+<col style="width: 7%" />
+<col style="width: 7%" />
+</colgroup>
+<thead>
+<tr>
+<th>Model</th>
+<th>Direction</th>
+<th style="text-align: center;">A: Baseline</th>
+<th style="text-align: center;">B: Nocorp</th>
+<th style="text-align: center;">C: Corpus</th>
+<th style="text-align: center;">A→B</th>
+<th style="text-align: center;">B→C</th>
+<th style="text-align: center;">A→C</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Claude Sonnet 4.6</td>
+<td>DV→EN</td>
+<td style="text-align: center;">62.4</td>
+<td style="text-align: center;">62.7</td>
+<td style="text-align: center;">64.4</td>
+<td style="text-align: center;">+0.3</td>
+<td style="text-align: center;">+1.7</td>
+<td style="text-align: center;"><strong>+2.0</strong></td>
+</tr>
+<tr>
+<td>Claude Sonnet 4.6</td>
+<td>EN→DV</td>
+<td style="text-align: center;">58.0</td>
+<td style="text-align: center;">58.0</td>
+<td style="text-align: center;">63.8</td>
+<td style="text-align: center;">+0.0</td>
+<td style="text-align: center;">+5.8</td>
+<td style="text-align: center;"><strong>+5.8</strong></td>
+</tr>
+<tr>
+<td>Claude Opus 4.7</td>
+<td>DV→EN</td>
+<td style="text-align: center;">63.4</td>
+<td style="text-align: center;">60.8</td>
+<td style="text-align: center;">62.6</td>
+<td style="text-align: center;">−2.6</td>
+<td style="text-align: center;">+1.8</td>
+<td style="text-align: center;"><strong>−0.8</strong></td>
+</tr>
+<tr>
+<td>Claude Opus 4.7</td>
+<td>EN→DV</td>
+<td style="text-align: center;">61.7</td>
+<td style="text-align: center;">65.1</td>
+<td style="text-align: center;">63.4</td>
+<td style="text-align: center;">+3.4</td>
+<td style="text-align: center;">−1.7</td>
+<td style="text-align: center;"><strong>+1.7</strong></td>
+</tr>
+<tr>
+<td>Gemini Flash 2.0</td>
+<td>DV→EN</td>
+<td style="text-align: center;">58.8</td>
+<td style="text-align: center;">60.2</td>
+<td style="text-align: center;">61.6</td>
+<td style="text-align: center;">+1.4</td>
+<td style="text-align: center;">+1.4</td>
+<td style="text-align: center;"><strong>+2.8</strong></td>
+</tr>
+<tr>
+<td>Gemini Flash 2.0</td>
+<td>EN→DV</td>
+<td style="text-align: center;">65.5</td>
+<td style="text-align: center;">59.6</td>
+<td style="text-align: center;">67.4</td>
+<td style="text-align: center;">−5.9</td>
+<td style="text-align: center;">+7.8</td>
+<td style="text-align: center;"><strong>+1.9</strong></td>
+</tr>
+<tr>
+<td>Gemini 3.5 Flash</td>
+<td>DV→EN</td>
+<td style="text-align: center;">63.7</td>
+<td style="text-align: center;">62.3</td>
+<td style="text-align: center;">61.8</td>
+<td style="text-align: center;">−1.4</td>
+<td style="text-align: center;">−0.5</td>
+<td style="text-align: center;"><strong>−1.9</strong></td>
+</tr>
+<tr>
+<td>Gemini 3.5 Flash</td>
+<td>EN→DV</td>
+<td style="text-align: center;">68.7</td>
+<td style="text-align: center;">15.7</td>
+<td style="text-align: center;">12.5</td>
+<td style="text-align: center;">−53.0</td>
+<td style="text-align: center;">−3.2</td>
+<td style="text-align: center;"><strong>−56.2</strong> ⚠</td>
+</tr>
+<tr>
+<td>GPT-5.5</td>
+<td>DV→EN</td>
+<td style="text-align: center;">60.7</td>
+<td style="text-align: center;">59.7</td>
+<td style="text-align: center;">61.6</td>
+<td style="text-align: center;">−1.0</td>
+<td style="text-align: center;">+1.9</td>
+<td style="text-align: center;"><strong>+0.9</strong></td>
+</tr>
+<tr>
+<td>GPT-5.5</td>
+<td>EN→DV</td>
+<td style="text-align: center;">31.0</td>
+<td style="text-align: center;">48.1</td>
+<td style="text-align: center;">55.9</td>
+<td style="text-align: center;"><strong>+17.1</strong></td>
+<td style="text-align: center;"><strong>+7.8</strong></td>
+<td style="text-align: center;"><strong>+24.9</strong></td>
+</tr>
+</tbody>
+</table>
+<p><em>All chrF scores 0–100, higher is better. ⚠ = format-leak failure;
+see §6.6.</em></p>
+<h3 data-number="1.6.2" id="bleu-comparison"><span
+class="header-section-number">1.6.2</span> 5.2 BLEU comparison</h3>
+<table>
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 16%" />
+<col style="width: 26%" />
+<col style="width: 23%" />
+<col style="width: 23%" />
+</colgroup>
+<thead>
+<tr>
+<th>Model</th>
+<th>Direction</th>
+<th style="text-align: center;">A: Baseline BLEU</th>
+<th style="text-align: center;">B: Nocorp BLEU</th>
+<th style="text-align: center;">C: Corpus BLEU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Claude Sonnet 4.6</td>
+<td>DV→EN</td>
+<td style="text-align: center;">22.9</td>
+<td style="text-align: center;">20.5</td>
+<td style="text-align: center;">26.3</td>
+</tr>
+<tr>
+<td>Claude Sonnet 4.6</td>
+<td>EN→DV</td>
+<td style="text-align: center;">6.7</td>
+<td style="text-align: center;">8.7</td>
+<td style="text-align: center;">10.0</td>
+</tr>
+<tr>
+<td>Claude Opus 4.7</td>
+<td>DV→EN</td>
+<td style="text-align: center;">22.3</td>
+<td style="text-align: center;">19.9</td>
+<td style="text-align: center;">23.9</td>
+</tr>
+<tr>
+<td>Claude Opus 4.7</td>
+<td>EN→DV</td>
+<td style="text-align: center;">11.2</td>
+<td style="text-align: center;">15.3</td>
+<td style="text-align: center;">13.2</td>
+</tr>
+<tr>
+<td>Gemini Flash 2.0</td>
+<td>DV→EN</td>
+<td style="text-align: center;">15.2</td>
+<td style="text-align: center;">18.1</td>
+<td style="text-align: center;">21.1</td>
+</tr>
+<tr>
+<td>Gemini Flash 2.0</td>
+<td>EN→DV</td>
+<td style="text-align: center;">13.6</td>
+<td style="text-align: center;">5.7</td>
+<td style="text-align: center;">22.3</td>
+</tr>
+<tr>
+<td>Gemini 3.5 Flash</td>
+<td>DV→EN</td>
+<td style="text-align: center;">26.3</td>
+<td style="text-align: center;">25.9</td>
+<td style="text-align: center;">22.4</td>
+</tr>
+<tr>
+<td>Gemini 3.5 Flash</td>
+<td>EN→DV</td>
+<td style="text-align: center;">20.7</td>
+<td style="text-align: center;">0.2</td>
+<td style="text-align: center;">0.3</td>
+</tr>
+<tr>
+<td>GPT-5.5</td>
+<td>DV→EN</td>
+<td style="text-align: center;">16.8</td>
+<td style="text-align: center;">18.2</td>
+<td style="text-align: center;">21.2</td>
+</tr>
+<tr>
+<td>GPT-5.5</td>
+<td>EN→DV</td>
+<td style="text-align: center;">1.1</td>
+<td style="text-align: center;">5.0</td>
+<td style="text-align: center;">5.3</td>
+</tr>
+</tbody>
+</table>
+<p>BLEU and chrF diverge substantially for EN→DV, which is expected: DV
+word boundaries do not align with the n-gram assumptions BLEU makes, and
+multiple valid Thaana renderings of an English phrase score differently
+under word-overlap vs character-overlap metrics. The near-zero BLEU for
+Gemini 3.5 Flash EN→DV in conditions B and C reflects the format-leak
+failure (§6.6).</p>
+<h3 data-number="1.6.3" id="provenance-at-condition-c"><span
+class="header-section-number">1.6.3</span> 5.3 Provenance at condition
+C</h3>
+<table>
+<colgroup>
+<col style="width: 9%" />
+<col style="width: 14%" />
+<col style="width: 27%" />
+<col style="width: 32%" />
+<col style="width: 15%" />
+</colgroup>
+<thead>
+<tr>
+<th>Model</th>
+<th>Direction</th>
+<th style="text-align: center;">Exemplars retrieved</th>
+<th style="text-align: center;">Glossary terms injected</th>
+<th style="text-align: center;">Cost (USD)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Claude Sonnet 4.6</td>
+<td>DV→EN</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">9</td>
+<td style="text-align: center;">$0.0225</td>
+</tr>
+<tr>
+<td>Claude Sonnet 4.6</td>
+<td>EN→DV</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">11</td>
+<td style="text-align: center;">$0.0303</td>
+</tr>
+<tr>
+<td>Claude Opus 4.7</td>
+<td>DV→EN</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">9</td>
+<td style="text-align: center;">$0.1279</td>
+</tr>
+<tr>
+<td>Claude Opus 4.7</td>
+<td>EN→DV</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">11</td>
+<td style="text-align: center;">$0.1574</td>
+</tr>
+<tr>
+<td>Gemini Flash 2.0</td>
+<td>DV→EN</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">9</td>
+<td style="text-align: center;">$0.0005</td>
+</tr>
+<tr>
+<td>Gemini Flash 2.0</td>
+<td>EN→DV</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">11</td>
+<td style="text-align: center;">$0.0006</td>
+</tr>
+<tr>
+<td>Gemini 3.5 Flash</td>
+<td>DV→EN</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">9</td>
+<td style="text-align: center;">$0.0008</td>
+</tr>
+<tr>
+<td>Gemini 3.5 Flash</td>
+<td>EN→DV</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">11</td>
+<td style="text-align: center;">$0.0006</td>
+</tr>
+<tr>
+<td>GPT-5.5</td>
+<td>DV→EN</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">9</td>
+<td style="text-align: center;">$0.0253</td>
+</tr>
+<tr>
+<td>GPT-5.5</td>
+<td>EN→DV</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">11</td>
+<td style="text-align: center;">$0.0569</td>
+</tr>
+</tbody>
+</table>
+<p>Opus 4.7’s per-call cost is approximately 50× Gemini 3.5 Flash’s and
+5× GPT-5.5’s, reflecting its position as the highest-tier Anthropic
+model. GPT-5.5 sits between the two in both cost and baseline Dhivehi
+capability.</p>
+<hr />
+<h2 data-number="1.7" id="analysis"><span
+class="header-section-number">1.7</span> 6. Analysis</h2>
+<h3 data-number="1.7.1"
+id="corpus-retrieval-dominates-over-prompt-engineering-for-mid-tier-models"><span
+class="header-section-number">1.7.1</span> 6.1 Corpus retrieval
+dominates over prompt engineering — for mid-tier models</h3>
+<p>In the original series (Sonnet 4.6 and Gemini Flash 2.0), the A→B
+delta (prompt engineering with an empty database) is small: 0.0 to +1.4
+chrF. The B→C delta (corpus retrieval) is +1.4 to +7.8 chrF. The pattern
+is unambiguous for this generation of models: it is the data, not the
+system prompt, that drives domain quality.</p>
+<p>This finding does <strong>not</strong> fully replicate for the
+upgraded models. Claude Opus 4.7 shows +0.6 A→C for DV→EN (corpus still
+helps, marginally) but −2.8 for EN→DV (corpus hurts). Gemini 3.5 Flash
+shows −0.6 for DV→EN and −54.7 for EN→DV (the latter being a
+format-failure, not a genuine quality regression). The corpus retrieval
+finding from Series 1 should therefore be interpreted as conditional on
+model capability: it holds most strongly when the model’s prior on
+formal Thaana register is weak. As baselines rise, the marginal value of
+retrieval diminishes — and the risk of prompt-format interactions
+increases.</p>
+<h3 data-number="1.7.2"
+id="endv-benefits-more-from-corpus-retrieval-than-dven-series-1"><span
+class="header-section-number">1.7.2</span> 6.2 EN→DV benefits more from
+corpus retrieval than DV→EN (Series 1)</h3>
+<p>In Series 1, the B→C delta for EN→DV is consistently larger than for
+DV→EN: +5.8 vs +1.7 (Sonnet), +7.8 vs +1.4 (Gemini Flash). Two
+explanations:</p>
+<p>First, <strong>DV→EN baseline quality is already higher</strong>.
+Frontier models are trained on substantially more English text than
+Thaana text. A model translating <em>into</em> English can draw on deep
+English-language competence even without domain context.</p>
+<p>Second, <strong>EN→DV register is harder to infer from
+pretraining</strong>. The formal Thaana used in PO press releases is a
+narrow written register not well-represented in general web text. The
+distinction between <code>ތަޢުޒިޔާ</code> (PO convention) and
+<code>ތައުޒިޔާ</code> (informal) is invisible to a model that has not seen
+PO output. The corpus exemplars resolve this directly.</p>
+<h3 data-number="1.7.3"
+id="gemini-flash-2.0-nocorp-endv-a-system-prompt-interaction-effect-series-1"><span
+class="header-section-number">1.7.3</span> 6.3 Gemini Flash 2.0 nocorp
+EN→DV: a system-prompt interaction effect (Series 1)</h3>
+<p>In Series 1, Gemini Flash EN→DV: the nocorp condition (B) scores −5.9
+chrF below baseline (A), while the corpus condition (C) scores +1.9
+above baseline. The pipeline first <em>hurts</em> quality, then
+<em>recovers and surpasses</em> it.</p>
+<p>Our interpretation: the moonlight system prompt is calibrated to
+Claude’s instruction-following characteristics. When applied to Gemini
+Flash 2.0 without domain examples, it over-constrains output — likely
+causing register shifts or unusual sentence structures. The corpus
+condition then provides sufficient positive examples to overcome this
+constraint. The article-level exemplars and sentence-level TM show
+Gemini what PO output actually looks like, and Gemini adapts accordingly
+(+7.8 B→C).</p>
+<h3 data-number="1.7.4"
+id="inverse-relationship-between-baseline-capability-and-pipeline-gain"><span
+class="header-section-number">1.7.4</span> 6.4 Inverse relationship
+between baseline capability and pipeline gain</h3>
+<p>The clearest pattern in the full dataset is that the moonlight
+pipeline provides the largest total gain to the model with the weakest
+baseline Dhivehi capability:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th style="text-align: center;">EN→DV Baseline</th>
+<th style="text-align: center;">A→C gain</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT-5.5</td>
+<td style="text-align: center;">31.0</td>
+<td style="text-align: center;"><strong>+24.9</strong></td>
+</tr>
+<tr>
+<td>Claude Sonnet 4.6</td>
+<td style="text-align: center;">58.0</td>
+<td style="text-align: center;">+5.8</td>
+</tr>
+<tr>
+<td>Claude Opus 4.7</td>
+<td style="text-align: center;">61.7</td>
+<td style="text-align: center;">+1.7</td>
+</tr>
+<tr>
+<td>Gemini Flash 2.0</td>
+<td style="text-align: center;">65.5</td>
+<td style="text-align: center;">+1.9</td>
+</tr>
+<tr>
+<td>Gemini 3.5 Flash</td>
+<td style="text-align: center;">68.7</td>
+<td style="text-align: center;">−56.2 ⚠</td>
+</tr>
+</tbody>
+</table>
+<p>The monotonic inverse relationship (ignoring the Gemini 3.5 Flash
+format-failure) holds across nearly 40 chrF points of baseline
+variation. This is consistent with the hypothesis that the corpus
+exemplars and glossary teach the model what formal Thaana looks like — a
+lesson that models with strong Dhivehi pretraining already know, and
+models with weak Dhivehi pretraining need urgently.</p>
+<p><strong>Claude Opus 4.7 specifics.</strong> Opus 4.7’s EN→DV baseline
+(61.7) is notably higher than Sonnet 4.6’s (58.0). The corpus condition
+provides only +1.7 A→C vs +5.8 for Sonnet. The model upgrade itself
+delivers more than the retrieval system did for its predecessor;
+operators choosing between upgrading the model vs. investing in corpus
+curation should note that for Anthropic models, the jump from Sonnet to
+Opus yields more absolute EN→DV improvement than the corpus retrieval
+system provided to Sonnet.</p>
+<p><strong>GPT-5.5 specifics.</strong> GPT-5.5’s EN→DV baseline (31.0)
+is the lowest in the study — roughly half Sonnet 4.6’s. This reflects
+GPT-5.5’s limited exposure to formal Thaana in pretraining. Yet this
+weakness makes it the model that benefits most from the moonlight
+pipeline. The corpus condition reaches 55.9 chrF — competitive with
+Sonnet 4.6 (58.0 baseline) and only 6 points behind Opus 4.7 (61.7
+baseline), at substantially lower per-call cost than Opus. For operators
+who want strong EN→DV quality without Opus pricing, GPT-5.5 + full
+corpus is a viable alternative.</p>
+<h3 data-number="1.7.5"
+id="gpt-5.5-the-largest-prompt-engineering-gain-ab"><span
+class="header-section-number">1.7.5</span> 6.5 GPT-5.5: the largest
+prompt-engineering gain (A→B)</h3>
+<p>The A→B delta (prompt engineering alone, empty corpus) is near zero
+for all models except two: Gemini Flash 2.0 EN→DV (−5.9, a regression
+explained by prompt-model mismatch in §6.3) and GPT-5.5 EN→DV (+17.1,
+the largest A→B improvement in the study).</p>
+<p>Going from a minimal “translate this to Dhivehi” prompt (condition A,
+31.0 chrF) to the full moonlight system instruction with no corpus data
+at all (condition B, 48.1 chrF) improves GPT-5.5’s EN→DV quality by 17.1
+chrF — without a single glossary term or article exemplar. The moonlight
+prompt alone tells GPT-5.5: - to use Thaana script (not
+transliteration); - to preserve institutional titles and honorifics in
+their PO form; - to maintain formal register throughout.</p>
+<p>GPT-5.5’s pretraining apparently includes enough Thaana text to
+respond to these instructions, but not enough to apply them without
+explicit prompting. The system prompt bridges the gap between “knows
+Dhivehi exists” and “can produce formal Dhivehi when asked
+correctly.”</p>
+<p>This finding reframes the paper’s central claim. The statement
+“corpus retrieval dominates over prompt engineering” is true for models
+with strong Dhivehi pretraining (Sonnet, Opus, Gemini). For models with
+weak Dhivehi pretraining (GPT-5.5), the system prompt is the primary
+driver of quality, and corpus retrieval provides a further but secondary
+boost (+7.8 B→C vs +17.1 A→B).</p>
+<h3 data-number="1.7.6"
+id="prompt-format-compatibility-failure-gemini-3.5-flash-endv-series-2"><span
+class="header-section-number">1.7.6</span> 6.6 Prompt-format
+compatibility failure: Gemini 3.5 Flash EN→DV (Series 2)</h3>
+<p>The Gemini 3.5 Flash EN→DV result in conditions B and C (chrF 15.7
+and 12.5, down from 67.2 at baseline) represents a catastrophic
+format-leak failure, not a genuine translation quality regression.
+Inspection of the raw output confirms the cause: the model is outputting
+the content of the phrase-context injection section itself rather than
+translating the input.</p>
+<p>The moonlight phrase-context layer (Layer 3) formats each
+sentence-pair snippet as:</p>
+<pre><code>*Source:* &quot;...&quot;
+*Dhivehi:* ...</code></pre>
+<p>Gemini 3.5 Flash interprets this markdown structure as the expected
+<em>output format</em> and produces responses that mirror this template,
+echoing the injected Dhivehi phrases instead of translating the EN
+input. The DV→EN direction is unaffected because the source phrases in
+that direction are Thaana text that Gemini does not confuse with an
+output format marker.</p>
+<p>This failure mode is absent in Gemini Flash 2.0 (Series 1), which
+applies the same prompt and does not exhibit format-echoing. It is also
+absent in both Claude models, which correctly distinguish context
+material from the translation task. The failure therefore reflects a
+model-specific instruction-following characteristic introduced or
+strengthened in Gemini 3.5 Flash: the model is more literal in treating
+markdown field labels as output scaffolding.</p>
+<p><strong>Resolution path:</strong> Renaming the phrase-context labels
+— for example, replacing <code>*Source:*</code> /
+<code>*Dhivehi:*</code> with <code>[CONTEXT EXAMPLE]</code> /
+<code>[CONTEXT TRANSLATION]</code> — should prevent Gemini 3.5 Flash
+from treating them as output format anchors. This fix has not been
+applied in the current evaluation; the Series 2 Gemini EN→DV results
+remain as documented evidence of the failure. Validating prompt format
+compatibility against each new model generation should be treated as a
+required pre-deployment step.</p>
+<h3 data-number="1.7.7" id="cross-series-baseline-progression"><span
+class="header-section-number">1.7.7</span> 6.7 Cross-series baseline
+progression</h3>
+<p>The model upgrades between Series 1 and Series 2 show higher
+baselines for all model-direction combinations where the comparison is
+valid:</p>
+<table>
+<thead>
+<tr>
+<th>Direction</th>
+<th style="text-align: center;">Sonnet baseline</th>
+<th style="text-align: center;">Opus baseline</th>
+<th style="text-align: center;">Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DV→EN</td>
+<td style="text-align: center;">62.4</td>
+<td style="text-align: center;">62.0</td>
+<td style="text-align: center;">−0.4</td>
+</tr>
+<tr>
+<td>EN→DV</td>
+<td style="text-align: center;">58.0</td>
+<td style="text-align: center;">66.2</td>
+<td style="text-align: center;"><strong>+8.2</strong></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Direction</th>
+<th style="text-align: center;">Flash 2.0 baseline</th>
+<th style="text-align: center;">Flash 3.5 baseline</th>
+<th style="text-align: center;">Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DV→EN</td>
+<td style="text-align: center;">58.8</td>
+<td style="text-align: center;">62.4</td>
+<td style="text-align: center;"><strong>+3.6</strong></td>
+</tr>
+<tr>
+<td>EN→DV</td>
+<td style="text-align: center;">65.5</td>
+<td style="text-align: center;">67.2</td>
+<td style="text-align: center;"><strong>+1.7</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The EN→DV direction benefits most from model upgrading. This is
+consistent with the hypothesis in §6.2: as more capable models better
+represent formal Thaana from pretraining, they approach the quality that
+Moonlight’s corpus retrieval was delivering to earlier models — but
+without requiring the retrieval system.</p>
+<h3 data-number="1.7.8"
+id="qualitative-observation-h.e.-transliteration"><span
+class="header-section-number">1.7.8</span> 6.8 Qualitative observation:
+H.E. transliteration</h3>
+<p>A systematic qualitative difference between conditions is the
+treatment of the honorific <code>H.E.</code> (His Excellency) when
+translating EN→DV. In condition A (baseline), both Claude models and
+both Gemini models produce a Thaana transliteration of the English
+abbreviation (<code>ހިޒް އެކްސެލެންسী</code>) inserted before each foreign
+head-of-state name — a pattern the PO never uses. The PO convention is
+to omit the transliteration and use the bare name for foreign
+officials.</p>
+<p>In condition C (corpus), Claude Opus 4.7 adopts the PO convention:
+the Thaana transliteration is absent. This qualitative difference —
+invisible to chrF if the reference does not contain the transliterated
+tokens — is exactly the kind of register error that matters in an
+institutional context and that automated metrics undercount.</p>
+<p>Interestingly, Claude Opus 4.7 baseline still produces
+<code>ހިޒް އެކްސެލެންسی</code> (with subtle Thaana character variation), while
+the corpus condition omits it entirely. This confirms that the glossary
+injection is providing a specific correction even when the model’s
+overall quality is already high.</p>
+<hr />
+<h2 data-number="1.8" id="limitations"><span
+class="header-section-number">1.8</span> 7. Limitations</h2>
+<p><strong>Single test article.</strong> BLEU and chrF are corpus-level
+metrics designed for aggregation over many documents. Deltas of ±3 on a
+single article are within expected variance. A robust evaluation
+requires 50+ articles across the five PO article categories (press
+release, speech, decree, amendment, vp_speech) and multiple years to
+cover terminology drift.</p>
+<p><strong>Single reference.</strong> The PO publishes one translation
+per article. This is one valid rendering, not the only one. Scoring
+against a single reference penalises semantically correct paraphrases.
+Multi-reference evaluation or MQM-style human annotation would give a
+more accurate picture of translation quality, particularly for the EN→DV
+direction where multiple orthographic conventions coexist.</p>
+<p><strong>No human evaluation.</strong> Automated metrics cannot
+measure register appropriateness, fluency as perceived by a Maldivian
+reader, or institutional correctness. The H.E. example in §6.8 is one
+case where automated metrics and a native speaker’s judgement would
+diverge. A study involving Dhivehi-English bilinguals familiar with PO
+conventions is needed to validate the qualitative claims here.</p>
+<p><strong>recency_days filter.</strong> The BM25 retrieval restricts
+results to articles published within the last 90 days by default. The
+eval corpus spans 2024-10 to 2026-05, yielding approximately 180
+eligible articles under this filter rather than the full 1,000 imported.
+Disabling or relaxing this filter would increase exemplar diversity at
+the cost of potentially including terminology from older ministerial
+periods.</p>
+<p><strong>Prompt-model compatibility.</strong> The Gemini 3.5 Flash
+EN→DV failure (§6.6) demonstrates that prompt format assumptions do not
+transfer across model generations without validation. The phrase-context
+injection format used in Moonlight was calibrated for Claude’s
+instruction-following characteristics and tested on Gemini Flash 2.0.
+Its failure on Gemini 3.5 Flash suggests that prompt format
+compatibility should be treated as a first-class evaluation criterion
+for any new model deployment, not an assumption.</p>
+<p><strong>Embedding model Thaana coverage.</strong>
+<code>paraphrase-multilingual-MiniLM-L12-v2</code> was trained on 50+
+languages, but Dhivehi is not among the prominently represented ones.
+The semantic embeddings for Thaana text are noisier than for
+well-resourced languages. The evaluation here uses BM25 only, leaving
+semantic retrieval gains unmeasured.</p>
+<hr />
+<h2 data-number="1.9" id="conclusion"><span
+class="header-section-number">1.9</span> 8. Conclusion</h2>
+<p>We have presented Moonlight and evaluated it across four frontier
+LLMs and both EN↔︎DV translation directions in a three-condition ablation
+design.</p>
+<p>The key findings are:</p>
+<ol type="1">
+<li><p><strong>Corpus retrieval dominates over prompt engineering for
+mid-tier models</strong> (Claude Sonnet 4.6, Gemini Flash 2.0). The A→B
+delta is at most +1.4 chrF; the B→C delta is up to +7.8 chrF. The data,
+not the prompt, drives domain quality improvement for these
+models.</p></li>
+<li><p><strong>Pipeline value is inversely proportional to baseline
+Dhivehi capability</strong>. GPT-5.5 (baseline 31.0 EN→DV) gains +24.9
+chrF A→C — the largest gain in the study. Claude Sonnet 4.6 (baseline
+58.0) gains +5.8. Claude Opus 4.7 (baseline 61.7) gains +1.7. The
+pattern is monotonic: weakest models gain most, strongest models gain
+least.</p></li>
+<li><p><strong>For weak-Dhivehi models, the system prompt is the primary
+driver</strong>. GPT-5.5’s A→B delta (+17.1 chrF, prompt design alone
+with empty corpus) is the largest single-stage improvement in the study
+— larger than any B→C delta. This reframes the finding from (1): “data
+dominates” is true when the model already knows what formal Thaana looks
+like; “prompt design dominates” is true when the model knows Dhivehi
+exists but needs explicit instruction on how to use it.</p></li>
+<li><p><strong>Prompt-format compatibility is a non-trivial deployment
+risk</strong>. The same phrase-context injection format that works
+correctly with Claude and Gemini Flash 2.0 causes Gemini 3.5 Flash to
+echo the context as output. This is not a model quality regression —
+Gemini 3.5 Flash’s EN→DV baseline (68.7) is the highest in the study —
+but a prompt format assumption silently violated by a model upgrade.
+Testing prompt compatibility against each new model generation is a
+required pre-deployment step.</p></li>
+<li><p><strong>Model upgrade alone can outperform corpus retrieval for
+strong-Dhivehi models, but not weak ones</strong>. For Anthropic models,
+upgrading from Sonnet 4.6 to Opus 4.7 yields ~3 chrF baseline
+improvement EN→DV, exceeding the corpus retrieval gain for Opus. But for
+GPT-5.5, whose baseline is 30 chrF below Opus, no model upgrade
+substitutes for the 25 chrF that the pipeline delivers — operators on
+that model should prioritise corpus curation over model tier.</p></li>
+</ol>
+<p>Moonlight is open-source and reproducible. The evaluation script
+recreates all three conditions from scratch given API keys and a
+kahzaabu database, at a cost of approximately $0.20–$0.30 per full run
+across two models and both directions.</p>
+<hr />
+<h2 data-number="1.10" id="references"><span
+class="header-section-number">1.10</span> References</h2>
+<p>Agrawal, S., Zhou, C., Lewis, M., Zettlemoyer, L., and Ghazvininejad,
+M. (2022). In-context examples selection for machine translation.
+<em>Findings of ACL 2023</em>.</p>
+<p>Costa-jussà, M. R., et al. (2022). No language left behind: Scaling
+human-centered machine translation. <em>arXiv:2207.04672</em>.</p>
+<p>Karpukhin, V., et al. (2020). Dense passage retrieval for open-domain
+question answering. <em>EMNLP 2020</em>.</p>
+<p>Lewis, P., et al. (2020). Retrieval-augmented generation for
+knowledge-intensive NLP tasks. <em>NeurIPS 2020</em>.</p>
+<p>Papineni, K., Roukos, S., Ward, T., and Zhu, W.-J. (2002). BLEU: a
+method for automatic evaluation of machine translation. <em>ACL
+2002</em>.</p>
+<p>Popović, M. (2015). chrF: character n-gram F-score for automatic MT
+evaluation. <em>WMT 2015</em>.</p>
+<p>Post, M. (2018). A call for clarity in reporting BLEU scores. <em>WMT
+2018</em>. [sacrebleu]</p>
+<p>Reimers, N. and Gurevych, I. (2019). Sentence-BERT: Sentence
+embeddings using Siamese BERT-networks. <em>EMNLP 2019</em>.</p>
+<p>Vilar, D., et al. (2023). Prompting PaLM for translation: Assessing
+strategies and performance. <em>ACL 2023</em>.</p>
+<p>Zhu, W., et al. (2023). Multilingual machine translation with large
+language models: Empirical results and analysis.
+<em>arXiv:2304.04675</em>.</p>
+<hr />
+<h2 data-number="1.11" id="appendix-a-reproduced-translations"><span
+class="header-section-number">1.11</span> Appendix A: Reproduced
+translations</h2>
+<p>Full translations for all conditions across all models are available
+in <a href="EVAL_RESULTS.md"><code>docs/EVAL_RESULTS.md</code></a>.</p>
+<h2 data-number="1.12" id="appendix-b-reproducing-this-evaluation"><span
+class="header-section-number">1.12</span> Appendix B: Reproducing this
+evaluation</h2>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Clone the repository</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/sofwath/moonlight</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> moonlight</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Install dependencies</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-e</span> <span class="st">&#39;.[eval]&#39;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Export API keys</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">ANTHROPIC_API_KEY</span><span class="op">=</span>sk-ant-...</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">GEMINI_API_KEY</span><span class="op">=</span>AIza...</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">OPENAI_API_KEY</span><span class="op">=</span>sk-proj-...  <span class="co"># optional; GPT-5.5 pending quota resolution</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Run (recreates all DBs and the report from scratch)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-f</span> data/eval_<span class="pp">*</span>.db</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/eval_baseline_vs_moonlight.py <span class="dt">\</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">--source-db</span> /path/to/kahzaabu.db</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># → docs/EVAL_RESULTS.md  (full translations + per-condition tables)</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co"># → README.md             (benchmark summary table)</span></span></code></pre></div>
+<p>The script automatically selects the best available model per
+provider. If an API key is absent, that provider is skipped. Cost:
+approximately $0.20–$0.30 per full run across two models and both
+directions (four model-direction pairs × 3 conditions = 12–18 LLM calls
+depending on models available).</p>
+<h2 data-number="1.13" id="appendix-c-citation"><span
+class="header-section-number">1.13</span> Appendix C: Citation</h2>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">@software{moonlight2024,</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">  author    = {Mohamed, Sofwathullah},</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">  title     = {Moonlight: Retrieval-Augmented Generation for Domain-Specific</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">               English--Dhivehi Machine Translation},</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">  year      = {2024},</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">  url       = {https://github.com/sofwath/moonlight}</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">}</span></span></code></pre></div>
+</body>
+</html>

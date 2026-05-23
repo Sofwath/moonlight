@@ -1,0 +1,39 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# SQLite databases — the corpus DB can be large
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# GeoNames cache (reproduced by `moonlight build-place-names`)
+data/geonames/
+
+# Sentence embedding models (downloaded automatically)
+models/
+
+# Eval output
+data/eval_history.jsonl
+docs/EVAL_RESULTS.md
+
+# Environment
+.env
+*.env
+.venv/
+venv/
+
+# Generated docs (PDF is binary; regenerate with pandoc)
+docs/*.pdf
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp

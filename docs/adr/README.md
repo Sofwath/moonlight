@@ -12,6 +12,7 @@ Each ADR documents a non-obvious design choice: what was decided, why, what alte
 | [0002](0002-hybrid-retrieval.md) | BM25 + multilingual sentence embeddings for hybrid retrieval | Accepted |
 | [0003](0003-two-translation-modes.md) | Two distinct translation modes: `faithful` and `po_style` | Accepted |
 | [0004](0004-evaluation-with-sacrebleu.md) | Evaluation with sacrebleu (BLEU + chrF) + numeric F1 + composite | Accepted |
+| [0005](0005-dhivehimt-bench-design.md) | DhivehiMT-Bench: three-component benchmark design for EN↔DV MT | Accepted |
 
 ## What qualifies as an ADR here
 

@@ -1,0 +1,279 @@
+{
+  "meta": {
+    "generated_at": "2026-05-24T04:40:49.028016+00:00",
+    "n_trials": 10000,
+    "seed": 42,
+    "method": "approximate_randomization",
+    "reference": "Riezler & Maxwell (2005). Bootstrapping and Approximate Randomization Testing for Comparing MT Systems. MT Summit X.",
+    "p_value_formula": "(count+1)/(n_trials+1) — standard Monte Carlo correction"
+  },
+  "runs_loaded": {
+    "run_001_frontier_baseline.json": [
+      "gpt4o_raw",
+      "claude_raw",
+      "gemini_raw"
+    ],
+    "run_002_frontier_best.json": [
+      "gpt5_raw",
+      "claude_opus_raw",
+      "gemini35_raw"
+    ],
+    "run_003_moonlight_full.json": [
+      "moonlight_full"
+    ]
+  },
+  "comparisons": [
+    {
+      "system_a": "gpt4o_raw",
+      "system_b": "claude_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_001_frontier_baseline.json",
+      "delta_chrf": -19.665,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gpt4o_raw",
+      "system_b": "gemini_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_001_frontier_baseline.json",
+      "delta_chrf": -21.656,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gpt4o_raw",
+      "system_b": "gpt5_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": -14.353,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gpt4o_raw",
+      "system_b": "claude_opus_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": -26.406,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gpt4o_raw",
+      "system_b": "gemini35_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": -28.609,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gpt4o_raw",
+      "system_b": "moonlight_full",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_003_moonlight_full.json",
+      "delta_chrf": -32.517,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "claude_raw",
+      "system_b": "gemini_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_001_frontier_baseline.json",
+      "delta_chrf": -1.991,
+      "p_value": 0.3452,
+      "significant_05": false,
+      "significant_01": false,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "claude_raw",
+      "system_b": "gpt5_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": 5.313,
+      "p_value": 0.0002,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "claude_raw",
+      "system_b": "claude_opus_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": -6.741,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "claude_raw",
+      "system_b": "gemini35_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": -8.944,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "claude_raw",
+      "system_b": "moonlight_full",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_003_moonlight_full.json",
+      "delta_chrf": -12.852,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gemini_raw",
+      "system_b": "gpt5_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": 7.304,
+      "p_value": 0.0028,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gemini_raw",
+      "system_b": "claude_opus_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": -4.75,
+      "p_value": 0.013,
+      "significant_05": true,
+      "significant_01": false,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gemini_raw",
+      "system_b": "gemini35_raw",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": -6.953,
+      "p_value": 0.0024,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gemini_raw",
+      "system_b": "moonlight_full",
+      "run_a": "run_001_frontier_baseline.json",
+      "run_b": "run_003_moonlight_full.json",
+      "delta_chrf": -10.861,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gpt5_raw",
+      "system_b": "claude_opus_raw",
+      "run_a": "run_002_frontier_best.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": -12.054,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gpt5_raw",
+      "system_b": "gemini35_raw",
+      "run_a": "run_002_frontier_best.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": -14.256,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gpt5_raw",
+      "system_b": "moonlight_full",
+      "run_a": "run_002_frontier_best.json",
+      "run_b": "run_003_moonlight_full.json",
+      "delta_chrf": -18.164,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "claude_opus_raw",
+      "system_b": "gemini35_raw",
+      "run_a": "run_002_frontier_best.json",
+      "run_b": "run_002_frontier_best.json",
+      "delta_chrf": -2.203,
+      "p_value": 0.1404,
+      "significant_05": false,
+      "significant_01": false,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "claude_opus_raw",
+      "system_b": "moonlight_full",
+      "run_a": "run_002_frontier_best.json",
+      "run_b": "run_003_moonlight_full.json",
+      "delta_chrf": -6.111,
+      "p_value": 0.0001,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    },
+    {
+      "system_a": "gemini35_raw",
+      "system_b": "moonlight_full",
+      "run_a": "run_002_frontier_best.json",
+      "run_b": "run_003_moonlight_full.json",
+      "delta_chrf": -3.908,
+      "p_value": 0.0003,
+      "significant_05": true,
+      "significant_01": true,
+      "n_shared_segments": 50,
+      "n_trials": 10000
+    }
+  ]
+}

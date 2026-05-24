@@ -282,10 +282,11 @@ def score_challenge_pair(hypothesis: str, correct: str, incorrect: str,
     import sacrebleu
 
     if category == "cat7_thaana_script":
-        # Binary: Thaana-only output required for DV target
+        # Binary: Thaana-only output required for DV target.
+        # Arabic comma U+060C is standard Dhivehi punctuation — allowed here.
+        _ALLOWED_NON_THAANA = set(" \t\n\r!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~0123456789،")
         thaana_only = all(
-            0x0780 <= ord(c) <= 0x07BF
-            or c in " \t\n\r!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~0123456789"
+            0x0780 <= ord(c) <= 0x07BF or c in _ALLOWED_NON_THAANA
             for c in hypothesis
         )
         return {
@@ -330,6 +331,49 @@ def bootstrap_ci(
         "mean": round(float(arr.mean()), 2),
         "lower": round(float(np.percentile(means, 100 * alpha)), 2),
         "upper": round(float(np.percentile(means, 100 * (1 - alpha))), 2),
+    }
+
+
+def approx_rand_test(
+    scores_a: list[float],
+    scores_b: list[float],
+    n_trials: int = 10_000,
+    seed: int = 42,
+) -> dict:
+    """Approximate randomization test for paired segment-level scores.
+
+    Tests H0: mean(A) == mean(B). Returns two-sided p-value.
+    Riezler & Maxwell (2005) recommend this over CI-overlap for MT comparisons.
+    n_trials=10000 gives a resolution of 0.0001 on p-value.
+    """
+    if len(scores_a) != len(scores_b):
+        return {"p_value": None, "delta": None, "note": "unequal lengths"}
+    try:
+        import numpy as np
+    except ImportError:
+        return {"p_value": None, "delta": None, "note": "numpy not installed"}
+
+    rng = np.random.default_rng(seed)
+    a = np.array(scores_a)
+    b = np.array(scores_b)
+    obs_delta = float(a.mean() - b.mean())
+    diffs = a - b
+    count = 0
+    for _ in range(n_trials):
+        signs = rng.choice([-1.0, 1.0], size=len(diffs))
+        shuffled_delta = float((signs * diffs).mean())
+        if abs(shuffled_delta) >= abs(obs_delta):
+            count += 1
+    # (count+1)/(n_trials+1): standard Monte Carlo p-value correction that
+    # prevents reporting p=0.0 exactly, which overstates certainty.
+    p = (count + 1) / (n_trials + 1)
+    return {
+        "delta": round(obs_delta, 3),
+        "p_value": round(p, 4),
+        "significant_05": p < 0.05,
+        "significant_01": p < 0.01,
+        "n": len(scores_a),
+        "n_trials": n_trials,
     }
 
 
@@ -419,17 +463,34 @@ def load_segments(
     return segments
 
 
-def load_challenge_pairs(benchmark_dir: Path) -> list[dict]:
+def load_challenge_pairs(benchmark_dir: Path, verified_only: bool = True) -> tuple[list[dict], dict]:
     p = benchmark_dir / "challenge_set" / "challenge_seed.jsonl"
     if not p.exists():
-        return []
-    pairs = []
+        return [], {"total": 0, "verified": 0, "unverified": 0, "selected": 0}
+    all_pairs, pairs = [], []
     with p.open(encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
-                pairs.append(json.loads(line))
-    return pairs
+                pair = json.loads(line)
+                all_pairs.append(pair)
+                if not verified_only or pair.get("verified", True):
+                    pairs.append(pair)
+    verified_count = sum(1 for pair in all_pairs if pair.get("verified", True))
+    stats = {
+        "total": len(all_pairs),
+        "verified": verified_count,
+        "unverified": len(all_pairs) - verified_count,
+        "selected": len(pairs),
+    }
+    if verified_only:
+        print(f"  Challenge pairs: {stats['selected']} verified (of {stats['total']} total)")
+    else:
+        print(
+            f"  Challenge pairs: {stats['selected']} selected "
+            f"({stats['verified']} verified, {stats['unverified']} unverified)"
+        )
+    return pairs, stats
 
 
 # ── Main evaluation loops ──────────────────────────────────────────────────────
@@ -543,6 +604,7 @@ def eval_challenge_set(
             results[sid].append({
                 "pair_id": pair_id,
                 "category": category,
+                "verified": pair.get("verified", True),
                 "passed": pair_score["passed"],
                 "margin": pair_score.get("margin"),
                 "chrf_correct": pair_score.get("chrf_correct"),
@@ -559,8 +621,11 @@ def eval_challenge_set(
 # ── Aggregate + reporting ──────────────────────────────────────────────────────
 
 def aggregate_main_set(per_system: dict[str, list[dict]]) -> dict:
-    """Compute aggregate metrics + bootstrap CIs per system."""
+    """Compute aggregate metrics + bootstrap CIs + pairwise significance per system."""
     agg = {}
+    # Collect aligned segment-level chrF scores keyed by segment_id for pairing
+    seg_scores: dict[str, dict[str, float]] = {}  # seg_id → {sid: chrf}
+
     for sid, records in per_system.items():
         if not records:
             continue
@@ -572,8 +637,9 @@ def aggregate_main_set(per_system: dict[str, list[dict]]) -> dict:
         for r in records:
             g = r.get("genre", "unknown")
             by_genre.setdefault(g, []).append(r["scores"]["chrf"])
+            seg_scores.setdefault(r["segment_id"], {})[sid] = r["scores"]["chrf"]
 
-        # Fluency (DV perplexity-based) — only present for DV-target segments
+        # Fluency: exploratory diagnostic only — stored separately, not in primary table
         fluency_scores = [
             r["scores"]["fluency"] for r in records
             if r["scores"].get("fluency") is not None
@@ -586,9 +652,31 @@ def aggregate_main_set(per_system: dict[str, list[dict]]) -> dict:
             "chrf_by_genre": {
                 g: round(sum(v)/len(v), 2) for g, v in by_genre.items()
             },
-            "fluency_mean": round(sum(fluency_scores)/len(fluency_scores), 2) if fluency_scores else None,
+            # Fluency demoted to exploratory diagnostic per §5.1; do not use for ranking
+            "fluency_diagnostic": {
+                "mean": round(sum(fluency_scores)/len(fluency_scores), 2) if fluency_scores else None,
+                "note": "exploratory only — Wikipedia-register model; not for primary claims",
+            },
             "total_cost_usd": round(total_cost, 4),
         }
+
+    # Pairwise approximate randomization tests on aligned segment-level chrF
+    system_ids = list(agg.keys())
+    pairwise: dict[str, dict] = {}
+    for i, sid_a in enumerate(system_ids):
+        for sid_b in system_ids[i + 1:]:
+            common = [seg_id for seg_id in seg_scores
+                      if sid_a in seg_scores[seg_id] and sid_b in seg_scores[seg_id]]
+            if not common:
+                continue
+            a_scores = [seg_scores[s][sid_a] for s in common]
+            b_scores = [seg_scores[s][sid_b] for s in common]
+            key = f"{sid_a} vs {sid_b}"
+            pairwise[key] = approx_rand_test(a_scores, b_scores)
+
+    if pairwise:
+        agg["_pairwise_significance"] = pairwise
+
     return agg
 
 
@@ -601,9 +689,12 @@ def aggregate_challenge_set(per_system: dict[str, list[dict]]) -> dict:
             cats.setdefault(r["category"], []).append(r["passed"])
         per_cat = {cat: round(sum(v)/len(v), 3) for cat, v in cats.items()}
         all_passes = [r["passed"] for r in records]
+        verified_passes = [r["passed"] for r in records if r.get("verified", True)]
         agg[sid] = {
             "n_pairs": len(records),
+            "n_verified": len(verified_passes),
             "overall_accuracy": round(sum(all_passes)/len(all_passes), 3) if all_passes else 0,
+            "verified_accuracy": round(sum(verified_passes)/len(verified_passes), 3) if verified_passes else None,
             "by_category": per_cat,
         }
     return agg
@@ -631,8 +722,8 @@ def render_summary(
         lines += [
             "## Main set results",
             "",
-            "| System | N | chrF (mean) | 95% CI | BLEU | Fluency | Cost |",
-            "|--------|---|:-----------:|--------|:----:|:-------:|-----:|",
+            "| System | N | chrF (mean) | 95% CI | BLEU | Cost |",
+            "|--------|---|:-----------:|--------|:----:|-----:|",
         ]
         for sid in systems:
             if sid not in main_agg:
@@ -641,24 +732,69 @@ def render_summary(
             ci = a["chrf"]
             ci_str = (f"[{ci['lower']:.1f}–{ci['upper']:.1f}]"
                       if ci.get("lower") is not None else "n/a")
-            fluency = f"{a['fluency_mean']:.1f}" if a.get("fluency_mean") is not None else "—"
             lines.append(
                 f"| {sid:<25} | {a['n']} | **{ci['mean']:.1f}** | {ci_str} "
-                f"| {a['bleu']['mean']:.1f} | {fluency} | ${a['total_cost_usd']:.2f} |"
+                f"| {a['bleu']['mean']:.1f} | ${a['total_cost_usd']:.2f} |"
             )
         lines += [
             "",
-            "> chrF: character n-gram F-score (0–100, higher=better).  "
-            "Fluency: DV naturalness via dhivehi-gpt2-base perplexity (0–100, higher=better).",
+            "> Primary metric: chrF (character n-gram F-score, 0–100). "
+            "95% CI via bootstrap (1,000 resamples). "
+            "CI overlap is not a formal significance test — see Pairwise Significance below.",
             "",
         ]
+
+        # Pairwise significance table
+        pairwise = main_agg.get("_pairwise_significance", {})
+        if pairwise:
+            lines += [
+                "## Pairwise significance (approximate randomization test, n=10,000 trials)",
+                "",
+                "| Pair | Δ chrF | p-value | p<0.05 |",
+                "|------|-------:|--------:|:------:|",
+            ]
+            for pair_key, res in sorted(pairwise.items()):
+                if res.get("p_value") is None:
+                    continue
+                sig = "✓" if res["significant_05"] else "✗"
+                lines.append(
+                    f"| {pair_key} | {res['delta']:+.2f} | {res['p_value']:.4f} | {sig} |"
+                )
+            lines += [
+                "",
+                "> Two-sided approximate randomization test (Riezler & Maxwell 2005). "
+                "Positive Δ = first system higher. p<0.05 threshold.",
+                "",
+            ]
+
+        # Fluency diagnostic — separate section, clearly marked exploratory
+        fluency_rows = [
+            (sid, main_agg[sid].get("fluency_diagnostic", {}).get("mean"))
+            for sid in systems if sid in main_agg
+        ]
+        fluency_rows = [(sid, v) for sid, v in fluency_rows if v is not None]
+        if fluency_rows:
+            lines += [
+                "## Fluency diagnostic (exploratory — do not use for ranking)",
+                "",
+                "> Computed via `alakxender/dhivehi-gpt2-base` perplexity. "
+                "Model trained on Dhivehi Wikipedia (encyclopedic register); "
+                "domain mismatch with formal PO text means scores reflect register distance, "
+                "not translation correctness. Reported for diagnostic use only.",
+                "",
+                "| System | Fluency (0–100) |",
+                "|--------|:--------------:|",
+            ]
+            for sid, val in fluency_rows:
+                lines.append(f"| {sid:<25} | {val:.1f} |")
+            lines.append("")
 
     if challenge_agg:
         lines += [
             "## Challenge set accuracy",
             "",
-            "| System | Overall | cat1_register | cat2_honorifics | cat3_entities | cat7_script |",
-            "|--------|:-------:|:-------------:|:---------------:|:-------------:|:-----------:|",
+            "| System | Overall | Verified | C1 Reg | C2 Hon | C3 Ent | C4 Conv | C5 Gen | C6 Num | C7 Scr | C8 Trm |",
+            "|--------|:-------:|:--------:|:------:|:------:|:------:|:-------:|:------:|:------:|:------:|:------:|",
         ]
         for sid in systems:
             if sid not in challenge_agg:
@@ -666,14 +802,20 @@ def render_summary(
             a = challenge_agg[sid]
             cats = a["by_category"]
             def pct(k): return f"{100*cats.get(k, float('nan')):.0f}%" if k in cats else "—"
+            ver = a.get("verified_accuracy")
+            ver_str = f"{100*ver:.0f}%" if ver is not None else "—"
             lines.append(
-                f"| {sid:<25} | {100*a['overall_accuracy']:.0f}% "
+                f"| {sid:<25} | {100*a['overall_accuracy']:.0f}% | {ver_str} "
                 f"| {pct('cat1_politeness_register')} "
                 f"| {pct('cat2_honorifics')} "
                 f"| {pct('cat3_named_entities')} "
-                f"| {pct('cat7_thaana_script')} |"
+                f"| {pct('cat4_converb_scaffold')} "
+                f"| {pct('cat5_gender_pronouns')} "
+                f"| {pct('cat6_numerals_dates')} "
+                f"| {pct('cat7_thaana_script')} "
+                f"| {pct('cat8_institutional_terminology')} |"
             )
-        lines += [""]
+        lines += ["", "> ⚠ C1/C4/C5 pairs not yet native-speaker-verified; treat as preliminary.", ""]
 
     return "\n".join(lines)
 
@@ -713,6 +855,22 @@ def main() -> None:
                         help="Only run challenge set evaluation (no main set).")
     parser.add_argument("--no-challenge", action="store_true",
                         help="Skip challenge set evaluation.")
+    parser.add_argument(
+        "--include-unverified",
+        action="store_true",
+        help=(
+            "Include challenge pairs with verified=false. Default behavior uses only "
+            "verified=true pairs."
+        ),
+    )
+    parser.add_argument(
+        "--publish-ready",
+        action="store_true",
+        help=(
+            "Enforce publication-safe policy: fail if any unverified challenge pair is "
+            "included, or if no verified challenge pairs are available."
+        ),
+    )
     parser.add_argument("--env-file", default=str(DEFAULT_ENV), metavar="PATH")
     parser.add_argument("--model-anthropic", default="claude-sonnet",
                         help="Anthropic model alias for claude_raw and moonlight systems.")
@@ -721,6 +879,11 @@ def main() -> None:
     parser.add_argument("--model-gemini", default="gemini-flash",
                         help="Gemini model alias for gemini_raw.")
     args = parser.parse_args()
+    if args.publish_ready and args.include_unverified:
+        sys.exit(
+            "--publish-ready cannot be combined with --include-unverified. "
+            "Use verified pairs only for publication-safe runs."
+        )
 
     load_env(Path(args.env_file).expanduser())
 
@@ -771,6 +934,8 @@ def main() -> None:
 
     main_results_raw: dict[str, list[dict]] = {}
     challenge_results_raw: dict[str, list[dict]] = {}
+    challenge_pair_policy = "verified_only"
+    challenge_pair_stats = {"total": 0, "verified": 0, "unverified": 0, "selected": 0}
 
     # Main set
     if not args.challenge_only:
@@ -789,7 +954,26 @@ def main() -> None:
     # Challenge set
     if not args.no_challenge:
         print(f"\n[{'4' if not args.challenge_only else '2'}] Loading challenge pairs …")
-        pairs = load_challenge_pairs(benchmark_dir)
+        use_verified_only = not args.include_unverified
+        challenge_pair_policy = "include_unverified" if args.include_unverified else "verified_only"
+        pairs, challenge_pair_stats = load_challenge_pairs(
+            benchmark_dir,
+            verified_only=use_verified_only,
+        )
+        if args.include_unverified:
+            print(
+                "  [warn] Unverified challenge pairs are included. "
+                "Treat results as exploratory."
+            )
+        if args.publish_ready:
+            if challenge_pair_stats["selected"] == 0:
+                sys.exit(
+                    "publish-ready run failed: no verified challenge pairs available."
+                )
+            if challenge_pair_policy != "verified_only":
+                sys.exit(
+                    "publish-ready run failed: challenge set policy must be verified_only."
+                )
         if pairs:
             print(f"  {len(pairs)} pairs × {len(runners)} systems")
             print(f"\n[{'5' if not args.challenge_only else '3'}] Running challenge set …")
@@ -814,6 +998,11 @@ def main() -> None:
 
     output_data = {
         "meta": run_meta,
+        "challenge_set_policy": {
+            "pair_selection": challenge_pair_policy,
+            "publish_ready": bool(args.publish_ready),
+            "stats": challenge_pair_stats,
+        },
         "main_set_aggregate": main_agg,
         "challenge_set_aggregate": challenge_agg,
         "main_set_raw": main_results_raw,
@@ -845,6 +1034,20 @@ def main() -> None:
             ci_str = (f"[{ci['lower']:.1f}–{ci['upper']:.1f}]"
                       if ci.get("lower") is not None else "")
             print(f"  {sid:<25} {ci['mean']:>8.1f}  {ci_str:>18}  ${a['total_cost_usd']:>6.2f}")
+
+        pairwise = main_agg.get("_pairwise_significance", {})
+        if pairwise:
+            print()
+            sig_pairs = [(k, v) for k, v in pairwise.items()
+                         if v.get("significant_05") and v.get("p_value") is not None]
+            nonsig_pairs = [(k, v) for k, v in pairwise.items()
+                            if not v.get("significant_05") and v.get("p_value") is not None]
+            print(f"  Pairwise significance (approx. rand. test):")
+            for k, v in sorted(sig_pairs):
+                print(f"    ✓ {k:<40} Δ={v['delta']:+.2f}  p={v['p_value']:.4f}")
+            for k, v in sorted(nonsig_pairs):
+                print(f"    ✗ {k:<40} Δ={v['delta']:+.2f}  p={v['p_value']:.4f}  (n.s.)")
+
     if challenge_agg:
         print()
         print(f"  {'System':<25} {'Challenge acc':>13}")

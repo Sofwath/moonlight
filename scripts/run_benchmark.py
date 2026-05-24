@@ -72,9 +72,15 @@ DEFAULT_ENV = ROOT / ".env"
 
 _SYSTEM_IDS = [
     "google_translate",
+    # Legacy / mid-tier baselines
     "gpt4o_raw",
     "claude_raw",
     "gemini_raw",
+    # Best frontier baselines (2026)
+    "gpt5_raw",        # GPT-5.5
+    "claude_opus_raw", # Claude Opus 4.7
+    "gemini35_raw",    # Gemini 3.5 Flash
+    # Moonlight variants
     "moonlight_nocorp",
     "moonlight_full",
     "moonlight_po_style",
@@ -247,12 +253,27 @@ class GoogleTranslateRunner:
 
 # ── Scoring ────────────────────────────────────────────────────────────────────
 
-def score_segment(hypothesis: str, reference: str) -> dict:
+_fluency_scorer = None
+
+def _get_fluency_scorer():
+    global _fluency_scorer
+    if _fluency_scorer is None:
+        from moonlight.dv_fluency import DvFluencyScorer
+        _fluency_scorer = DvFluencyScorer()
+    return _fluency_scorer
+
+
+def score_segment(hypothesis: str, reference: str, target_lang: str = "") -> dict:
     import sacrebleu
-    return {
+    scores = {
         "bleu": round(sacrebleu.corpus_bleu([hypothesis], [[reference]]).score, 2),
         "chrf": round(sacrebleu.corpus_chrf([hypothesis], [[reference]]).score, 2),
     }
+    if target_lang == "DV":
+        scorer = _get_fluency_scorer()
+        scores["fluency"] = scorer.fluency_score(hypothesis)
+        scores["perplexity"] = scorer.perplexity(hypothesis)
+    return scores
 
 
 def score_challenge_pair(hypothesis: str, correct: str, incorrect: str,
@@ -357,6 +378,12 @@ def build_systems(
             runners[sid] = BaselineRunner("claude_raw", model_anthropic)
         elif sid == "gemini_raw":
             runners[sid] = BaselineRunner("gemini_raw", model_gemini)
+        elif sid == "gpt5_raw":
+            runners[sid] = BaselineRunner("gpt5_raw", "gpt-5.5")
+        elif sid == "claude_opus_raw":
+            runners[sid] = BaselineRunner("claude_opus_raw", "claude-opus")
+        elif sid == "gemini35_raw":
+            runners[sid] = BaselineRunner("gemini35_raw", "gemini-3.5-flash")
         elif sid == "moonlight_nocorp":
             runners[sid] = MoonlightRunner("moonlight_nocorp", model_anthropic, nocorp_path, "faithful")
         elif sid == "moonlight_full":
@@ -451,7 +478,7 @@ def eval_main_set(
                     cache.put(seg_id, sid, hypothesis, cost, 0.0, model_id)
                 from_cache = False
 
-            scores = score_segment(hypothesis, reference)
+            scores = score_segment(hypothesis, reference, target_lang=tgt_lang)
             results[sid].append({
                 "segment_id": seg_id,
                 "genre": seg.get("genre"),
@@ -546,6 +573,12 @@ def aggregate_main_set(per_system: dict[str, list[dict]]) -> dict:
             g = r.get("genre", "unknown")
             by_genre.setdefault(g, []).append(r["scores"]["chrf"])
 
+        # Fluency (DV perplexity-based) — only present for DV-target segments
+        fluency_scores = [
+            r["scores"]["fluency"] for r in records
+            if r["scores"].get("fluency") is not None
+        ]
+
         agg[sid] = {
             "n": len(records),
             "chrf": bootstrap_ci(chrf_scores),
@@ -553,6 +586,7 @@ def aggregate_main_set(per_system: dict[str, list[dict]]) -> dict:
             "chrf_by_genre": {
                 g: round(sum(v)/len(v), 2) for g, v in by_genre.items()
             },
+            "fluency_mean": round(sum(fluency_scores)/len(fluency_scores), 2) if fluency_scores else None,
             "total_cost_usd": round(total_cost, 4),
         }
     return agg
@@ -597,8 +631,8 @@ def render_summary(
         lines += [
             "## Main set results",
             "",
-            "| System | N | chrF (mean) | 95% CI | BLEU | Cost |",
-            "|--------|---|:-----------:|--------|:----:|-----:|",
+            "| System | N | chrF (mean) | 95% CI | BLEU | Fluency | Cost |",
+            "|--------|---|:-----------:|--------|:----:|:-------:|-----:|",
         ]
         for sid in systems:
             if sid not in main_agg:
@@ -607,11 +641,17 @@ def render_summary(
             ci = a["chrf"]
             ci_str = (f"[{ci['lower']:.1f}–{ci['upper']:.1f}]"
                       if ci.get("lower") is not None else "n/a")
+            fluency = f"{a['fluency_mean']:.1f}" if a.get("fluency_mean") is not None else "—"
             lines.append(
                 f"| {sid:<25} | {a['n']} | **{ci['mean']:.1f}** | {ci_str} "
-                f"| {a['bleu']['mean']:.1f} | ${a['total_cost_usd']:.2f} |"
+                f"| {a['bleu']['mean']:.1f} | {fluency} | ${a['total_cost_usd']:.2f} |"
             )
-        lines += ["", "> Primary metric: chrF (character n-gram F-score, 0–100).", ""]
+        lines += [
+            "",
+            "> chrF: character n-gram F-score (0–100, higher=better).  "
+            "Fluency: DV naturalness via dhivehi-gpt2-base perplexity (0–100, higher=better).",
+            "",
+        ]
 
     if challenge_agg:
         lines += [

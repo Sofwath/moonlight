@@ -246,6 +246,15 @@ _FAITHFUL_MODE_INSTRUCTIONS = (
     "factual error. If the source says 'on May 19' or 'on the "
     "4th of November', that date MUST appear in the output.\n"
     "\n"
+    "CONVERB CHAINS (DV output only): Dhivehi uses converb "
+    "constructions where sequential actions share a single finite "
+    "verb at the end. A chain like 'X ކޮށް Y ކޮށް Z ކުރެއްވިއެވެ' "
+    "encodes X and Y as converb clauses (ending in -ކޮށް or -އިގެ) "
+    "with Z as the finite clause. Do NOT break these into separate "
+    "sentences. Preserve the converb chain structure — flattening it "
+    "into multiple finite sentences changes the logical dependency "
+    "and loses the Dhivehi grammatical register.\n"
+    "\n"
     "Preserve rhetorical structure as closely as possible. "
     "Quoted speech in the source stays quoted in the output "
     "(do NOT convert quotes to reported speech in faithful "
@@ -924,15 +933,24 @@ def _cache_lookup(
 #   it captures exactly the failure mode we care about: number / entity loss.
 
 
+def _has_thaana(text: str) -> bool:
+    return bool(_THAANA_RE.search(text))
+
+
 def _single_llm_call(
     llm: "LLMClient",
     system: str,
     user: str,
+    target_lang: str = "",
 ) -> tuple[str, float, int, int]:
-    """Single LLM call with one degenerate-output retry at higher temperature.
+    """Single LLM call with retry for degenerate output or wrong-script response.
 
     Returns ``(translation_text, cost_usd, tokens_in, tokens_out)``.
-    Temperature quirks (o1/o3, DeepSeek-R1) are handled inside ``LLMClient``.
+
+    Two retry triggers:
+    - Repeating-token pathology (_is_degenerate): retry at temperature=0.7
+    - DV target but no Thaana in output (model output English or romanized):
+      retry with an explicit script reminder appended to the user message
     """
     translation, tokens_in, tokens_out = llm.chat(system, user, max_tokens=4000)
     cost = llm.cost_usd(tokens_in, tokens_out)
@@ -950,6 +968,34 @@ def _single_llm_call(
         tokens_out += r_out
         if not _is_degenerate(translation2):
             translation = translation2
+
+    elif target_lang == "DV" and not _has_thaana(translation):
+        # Model output English or romanized Dhivehi instead of Thaana script.
+        # Append an explicit script reminder and retry once.
+        logger.warning(
+            "_single_llm_call: DV target but no Thaana in output "
+            "(model=%s, first 80 chars: %r); retrying with script reminder",
+            llm.model_id, translation[:80],
+        )
+        reminder = (
+            "\n\n⚠ CRITICAL: Your previous response was not in Thaana script. "
+            "The output MUST be written entirely in Dhivehi Thaana script "
+            "(Unicode block U+0780–U+07BF). Do NOT output English, romanized "
+            "Dhivehi, or any other script. Translate again now."
+        )
+        translation2, r_in, r_out = llm.chat(
+            system, user + reminder, max_tokens=4000)
+        cost += llm.cost_usd(r_in, r_out)
+        tokens_in += r_in
+        tokens_out += r_out
+        if _has_thaana(translation2):
+            translation = translation2
+        else:
+            logger.error(
+                "_single_llm_call: Thaana retry also failed (model=%s); "
+                "returning original output",
+                llm.model_id,
+            )
 
     return translation, cost, tokens_in, tokens_out
 
@@ -1198,7 +1244,7 @@ def translate(
     _n = 1 if (ablate or n_candidates < 1) else max(1, int(n_candidates))
     _candidates: list[tuple[str, float, int, int]] = []
     for _ in range(_n):
-        _candidates.append(_single_llm_call(llm, system, user))
+        _candidates.append(_single_llm_call(llm, system, user, target_lang=target_lang))
 
     if _n == 1:
         translation, cost, tokens_in, tokens_out = _candidates[0]

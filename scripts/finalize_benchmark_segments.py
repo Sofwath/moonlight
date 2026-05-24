@@ -42,7 +42,8 @@ def _run_quality_check(segments: list[dict]) -> dict[str, str]:
     ARABIC_LETTER_MIN = 0x0621
     ARABIC_LETTER_MAX = 0x06FF
     ARABIC_INDIC_NUMS = set(range(0x0660, 0x066A))
-    LEN_RATIO_MIN, LEN_RATIO_MAX = 1.0, 3.0
+    # Direction-specific thresholds (EN→DV: DV is longer; DV→EN: EN is shorter)
+    LEN_RATIO_BOUNDS = {"en_dv": (1.0, 3.0), "dv_en": (0.35, 1.2)}
 
     def _has_thaana(t): return any(THAANA_RANGE[0] <= ord(c) <= THAANA_RANGE[1] for c in t)
     def _has_arabic(t): return any(
@@ -54,12 +55,15 @@ def _run_quality_check(segments: list[dict]) -> dict[str, str]:
     statuses = {}
     for seg in segments:
         src, ref = seg.get("source", ""), seg.get("reference", "")
+        src_lang = seg.get("source_lang", "EN")
         tgt = seg.get("target_lang", "DV")
+        direction = f"{src_lang.lower()}_{tgt.lower()}"
+        ratio_min, ratio_max = LEN_RATIO_BOUNDS.get(direction, (0.5, 3.0))
         flags = []
 
         ratio = len(ref) / max(len(src), 1)
-        if ratio < LEN_RATIO_MIN: flags.append("len_ratio_low")
-        elif ratio > LEN_RATIO_MAX: flags.append("len_ratio_high")
+        if ratio < ratio_min: flags.append("len_ratio_low")
+        elif ratio > ratio_max: flags.append("len_ratio_high")
 
         if tgt == "DV":
             if not _has_thaana(ref): flags.append("no_thaana")

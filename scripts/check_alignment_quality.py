@@ -41,8 +41,15 @@ _ARABIC_LETTER_MAX = 0x06FF  # end of Arabic block (covers extended letters)
 # Arabic-Indic numerals are a separate Cat-6 issue, not hard contamination
 _ARABIC_INDIC_NUMS = set(range(0x0660, 0x066A))
 
-_LEN_RATIO_MIN = 1.0
-_LEN_RATIO_MAX = 3.0
+# Direction-specific length ratio thresholds.
+# ratio = len(reference) / len(source)
+# EN→DV: DV morphology inflates length; EN is the shorter side (1.0–3.0)
+# DV→EN: EN is naturally shorter than DV source (0.35–1.2)
+_LEN_RATIO = {
+    "en_dv": (1.0, 3.0),
+    "dv_en": (0.35, 1.2),
+}
+_LEN_RATIO_DEFAULT = (0.5, 3.0)  # fallback when direction is unknown
 
 
 def _has_thaana(text: str) -> bool:
@@ -74,21 +81,24 @@ def _extract_years(text: str) -> set[str]:
 def check_pair(seg: dict) -> dict:
     src = seg.get("source", "")
     ref = seg.get("reference", "")
+    src_lang = seg.get("source_lang", "")
+    tgt = seg.get("target_lang", "DV")
     flags: list[str] = []
     signals: dict = {}
 
-    # Length ratio
+    # Length ratio — direction-aware thresholds
+    direction = f"{src_lang.lower()}_{tgt.lower()}" if src_lang and tgt else ""
+    ratio_min, ratio_max = _LEN_RATIO.get(direction, _LEN_RATIO_DEFAULT)
     src_len = max(len(src), 1)
     ref_len = len(ref)
     ratio = ref_len / src_len
     signals["len_ratio"] = round(ratio, 2)
-    if ratio < _LEN_RATIO_MIN:
+    if ratio < ratio_min:
         flags.append(f"len_ratio_low:{ratio:.2f}")
-    elif ratio > _LEN_RATIO_MAX:
+    elif ratio > ratio_max:
         flags.append(f"len_ratio_high:{ratio:.2f}")
 
     # Thaana presence in reference (DV side)
-    tgt = seg.get("target_lang", "DV")
     if tgt == "DV":
         signals["has_thaana"] = _has_thaana(ref)
         if not signals["has_thaana"]:

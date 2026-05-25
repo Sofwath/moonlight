@@ -84,6 +84,25 @@ from moonlight.llm import LLMClient, RateLimitError, model_id as resolve_model_i
 
 logger = logging.getLogger(__name__)
 
+# ── Tuning constants ───────────────────────────────────────────────────────────
+# Centralised so ablation studies can override them without hunting the code.
+
+# Candidate scoring weights (see _candidate_score).
+# Entity check is weighted 2× numeric F1: a translation that drops a named
+# entity is worse than one with a slightly off number, even if chrF is similar.
+_SCORE_ENTITY_WEIGHT: float = 2.0
+_SCORE_NUMERIC_WEIGHT: float = 1.0
+
+# Adaptive exemplar count (k_few) by word count of the input.
+# po_style always uses the maximum — register requires more voice samples.
+# faithful mode uses fewer for short inputs: glossary + phrase_contexts carry
+# the terminology load; extra exemplars burn tokens and add noise.
+_K_FEW_SHORT_LIMIT: int = 20   # ≤ this → use _K_FEW_SHORT exemplars
+_K_FEW_MED_LIMIT: int = 100   # ≤ this → use _K_FEW_MED exemplars
+_K_FEW_SHORT: int = 2
+_K_FEW_MED: int = 3
+_K_FEW_LONG: int = 5          # > _K_FEW_MED_LIMIT, or any po_style input
+
 
 # ── Language detection ─────────────────────────────────────────────────────────
 #
@@ -126,8 +145,16 @@ _PO_STYLE_NOTES = (
     "  - 'ރައީސުލްޖުމްހޫރިއްޔާ' (NOT 'ޕްރެޒިޑެންޓް') for 'President'\n"
     "  - 'ދައުލަތުގެ ވަޒީރުންގެ މަޖިލިސް' for 'Cabinet'\n"
     "  - 'ރައްޔިތުންގެ މަޖިލިސް' for 'People's Majlis' (Parliament)\n"
-    "  - Full institutional names, not abbreviations\n"
+    "  - Full institutional names, not acronyms (e.g. 'ޖުޑީޝަލް ސަރވިސް ކޮމިޝަން' "
+    "not 'JSC'). Exception: USE the PO's standard atoll abbreviations — "
+    "ހ. ހދ. ށ. ނ. ރ. ބ. ޅ. ކ. އ. އދ. ވ. މ. ފ. ދ. ތ. ލ. ގ. ގދ. ސ. — "
+    "NOT the full traditional atoll name (e.g. 'ތ.' NOT 'ކޮޅުމަޑުލު' — "
+    "match the abbreviation the EXAMPLES use).\n"
     "  - No colloquial Thaana; preserves classical political register\n"
+    "  - VERB ASPECT: use narrative past '-ވިއެވެ' / '-ވިދާޅުވިއެވެ' for "
+    "completed formal actions in prose. Do NOT use the perfective '-ވެއްޖެ' "
+    "/ '-ވިދާޅުވެއްޖެ' — that implies immediate newsworthiness and reads as "
+    "informal news-copy, not PO institutional prose.\n"
     "\n"
     "===  TERMINOLOGY FIDELITY RULE (LOAD-BEARING)  ===\n"
     "The PO has a preferred phrasing for many recurring concepts "
@@ -916,11 +943,20 @@ def _cache_lookup(
         "exemplar_ids":        exemplar_ids,
         "exemplars":           exemplar_refs,
         "glossary_terms_used": row[4] or 0,
+        "terms_locked":        0,
+        "lock_misses":         [],
+        "entity_check":        None,
         "phrase_contexts":     [],
+        "sentence_memory_used": [],
         "model":               row[5],
         "cost_usd":            row[6] or 0.0,
         "cache_hit":           True,
         "cached_at":           row[7],
+        "n_candidates":        1,
+        "tokens_in":           0,
+        "tokens_out":          0,
+        "mode":                "faithful",
+        "ablate":              [],
     }
 
 
@@ -1026,7 +1062,7 @@ def _candidate_score(
     else:
         tp = len(src_nums & pred_nums)
         num_f1 = (2 * tp / (len(src_nums) + len(pred_nums))) if tp else 0.0
-    return 2.0 * float(check["passed"]) + num_f1
+    return _SCORE_ENTITY_WEIGHT * float(check["passed"]) + _SCORE_NUMERIC_WEIGHT * num_f1
 
 
 # ── Public translation entry point ─────────────────────────────────────────────
@@ -1150,13 +1186,13 @@ def translate(
     # just burn tokens and add noise.
     _wc = len(text.split())
     if mode == "po_style":
-        k_few = 5
-    elif _wc <= 50:
-        k_few = 2
-    elif _wc <= 200:
-        k_few = 3
+        k_few = _K_FEW_LONG
+    elif _wc <= _K_FEW_SHORT_LIMIT:
+        k_few = _K_FEW_SHORT
+    elif _wc <= _K_FEW_MED_LIMIT:
+        k_few = _K_FEW_MED
     else:
-        k_few = 5
+        k_few = _K_FEW_LONG
 
     exemplars_raw = [] if "few_shot" in ablate else corpus.select_few_shot(
         conn, source_lang, text, k=k_few,
@@ -1212,8 +1248,8 @@ def translate(
         try:
             from moonlight.place_names import lookup_place_names_for_text
             _place_names = lookup_place_names_for_text(conn, text)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("place_names lookup skipped: %s", e)
 
     system, user = _compose_prompt(
         locked_text, source_lang, target_lang, glossary, exemplars,
@@ -1355,7 +1391,12 @@ def translate(
         "lock_misses":          lock_misses,
         "entity_check":         entity_check,
         "phrase_contexts":      [
-            {"phrase": c.get("phrase", ""), "article_id": c.get("article_id")}
+            {
+                "phrase":          c.get("phrase", ""),
+                "article_id":      c.get("article_id"),
+                "paired_id":       c.get("paired_id"),
+                "source_snippet":  (c.get("snippet") or "")[:400],
+            }
             for c in phrase_contexts
         ],
         "sentence_memory_used": [
@@ -1369,6 +1410,8 @@ def translate(
         "cost_usd":             cost,
         "cache_hit":            False,
         "n_candidates":         _n,
+        "tokens_in":            tokens_in,
+        "tokens_out":           tokens_out,
         "mode":                 mode,
         "ablate":               sorted(ablate) if ablate else [],
         "disclaimer":           _DISCLAIMER,

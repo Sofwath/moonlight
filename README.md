@@ -6,6 +6,14 @@ Moonlight is a standalone English ↔ Dhivehi translation engine that uses retri
 
 ---
 
+## Demo
+
+<video src="demo/moonlight_workbench_demo.mp4" controls width="100%">
+  <a href="demo/moonlight_workbench_demo.mp4">Watch the workbench demo (1:04)</a>
+</video>
+
+---
+
 ## Table of Contents
 
 - [Problem Statement](#problem-statement)

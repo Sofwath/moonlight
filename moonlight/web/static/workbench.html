@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>moonlight — workbench</title>
+<link rel="stylesheet" href="/static/css/moonlight.css" />
+<script src="/static/js/thaana-keyboard.js"></script>
+<script src="/static/js/workbench.js"></script>
+<script defer src="/static/js/alpine.min.js"></script>
+<style>
+/* ── Layout ──────────────────────────────────────────────────────────── */
+.wb-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.wb-editor {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-xl);
+    margin-bottom: var(--sp-xl);
+    align-items: stretch;
+}
+@media (max-width: 900px) { 
+    .wb-editor { grid-template-columns: 1fr; gap: var(--sp-lg); } 
+}
+
+.wb-pane {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-lg);
+    padding: var(--sp-xl);
+    box-shadow: var(--glass-shadow), var(--glass-shadow-inset);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-md);
+    min-width: 0;
+}
+
+.wb-pane-label {
+    font: var(--type-label);
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    min-height: 22px;
+    flex-wrap: wrap;
+}
+
+/* ── Source textarea ─────────────────────────────────────────────────── */
+textarea.wb-input {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: var(--sp-md) var(--sp-lg);
+    color: var(--fg);
+    font: var(--type-body-prose);
+    height: 220px;
+    min-height: 140px;
+    max-height: 60vh;
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    line-height: 1.65;
+    overflow-y: auto;
+    transition: all 0.2s ease;
+}
+textarea.wb-input:focus {
+    border-color: var(--primary);
+    box-shadow: var(--primary-glow), inset 0 1px 2px rgba(0,0,0,0.2);
+    background: rgba(0, 0, 0, 0.35);
+}
+textarea.wb-input::placeholder {
+    color: var(--fg-muted);
+    opacity: 0.7;
+}
+
+/* ── Controls row ───────────────────────────────────────────────────── */
+.wb-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
+}
+
+.wb-controls-primary {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: center;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.wb-controls-secondary {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: center;
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.wb-controls select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-sm);
+    padding: 5px 26px 5px 10px;
+    color: var(--fg-dim);
+    font: var(--type-caption);
+    max-width: 150px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(157, 176, 194, 0.8)'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 11px;
+    transition: all 0.15s ease;
+}
+.wb-controls select:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--fg);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+.wb-controls select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.wb-controls label.verify-label {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    cursor: pointer;
+    font: var(--type-caption);
+    color: var(--fg-dim);
+    white-space: nowrap;
+    user-select: none;
+}
+.wb-controls label.verify-label input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-sm);
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s ease;
+}
+.wb-controls label.verify-label input[type="checkbox"]:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: var(--primary-glow);
+}
+.wb-controls label.verify-label input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 7px;
+    border: solid #ffffff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+.wb-controls label.verify-label:hover input[type="checkbox"] {
+    border-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.char-count {
+    font: var(--type-caption);
+    color: var(--fg-muted);
+    margin-left: auto;
+    white-space: nowrap;
+}
+.char-count.danger { color: var(--lie); font-weight: 600; }
+
+/* ── Output token pane ──────────────────────────────────────────────── */
+.wb-output-box {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: var(--sp-md) var(--sp-lg);
+    flex: 1;
+    min-height: 140px;
+    max-height: 60vh;
+    line-height: 1.85;
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-break: break-word;
+}
+
+.wb-output-box.thaana {
+    direction: rtl;
+    font-size: 16px;
+    line-height: 2.0;
+}
+
+.dv-token {
+    display: inline;
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    padding: 1px 3px;
+    transition: background-color 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
+}
+.dv-token:hover { 
+    background: rgba(108, 142, 247, 0.18); 
+    box-shadow: 0 0 6px rgba(108, 142, 247, 0.1);
+}
+.dv-token.token-selected {
+    background: rgba(108, 142, 247, 0.3);
+    outline: 1px solid var(--primary);
+    box-shadow: 0 0 10px rgba(108, 142, 247, 0.25);
+}
+
+/* ── Register badges ─────────────────────────────────────────────────── */
+.reg-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    padding: 2px 5px;
+    border-radius: var(--r-sm);
+    vertical-align: middle;
+    margin-left: 3px;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+.badge-purple { background: rgba(155,107,211,0.15); color: #c49fe6; border: 1px solid rgba(155,107,211,0.35); }
+.badge-blue   { background: rgba(91,168,213,0.15);   color: #8dc8e8; border: 1px solid rgba(91,168,213,0.35); }
+.badge-yellow { background: rgba(247,201,72,0.12);   color: #f0d080; border: 1px solid rgba(247,201,72,0.3); }
+.badge-amber  { background: rgba(240,160,75,0.12);   color: #f0a84d; border: 1px solid rgba(240,160,75,0.3); }
+.badge-dim    { background: rgba(107,130,154,0.15);  color: #9db0c2; border: 1px solid rgba(107,130,154,0.3); }
+
+/* ── Entity check badge ──────────────────────────────────────────────── */
+.entity-badge {
+    font: var(--type-label);
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+    font-size: 11px;
+}
+.entity-badge.pass { background: rgba(72,187,120,0.12); color: var(--good); border: 1px solid rgba(72,187,120,0.3); }
+.entity-badge.fail { background: rgba(237,137,54,0.12); color: var(--deadline); border: 1px solid rgba(237,137,54,0.3); }
+
+/* ── Output action row ───────────────────────────────────────────────── */
+.wb-output-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-xs);
+    margin-top: var(--sp-sm);
+    row-gap: var(--sp-xs);
+}
+.wb-meta {
+    font: var(--type-caption);
+    color: var(--fg-muted);
+    margin-left: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
+}
+
+/* ── Analysis tabs ───────────────────────────────────────────────────── */
+.wb-analysis {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--glass-shadow), var(--glass-shadow-inset);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    overflow: hidden;
+    margin-top: var(--sp-xl);
+}
+
+.wb-tabs {
+    display: flex;
+    gap: var(--sp-xs);
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 0 var(--sp-md);
+    overflow-x: auto;
+}
+
+.wb-tab {
+    background: none;
+    border: none;
+    color: var(--fg-dim);
+    font: var(--type-label);
+    font-weight: 500;
+    padding: 14px 18px;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+    transition: color 0.2s ease;
+}
+.wb-tab::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 18px;
+    right: 18px;
+    height: 2px;
+    background: var(--primary);
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+    box-shadow: var(--primary-glow);
+}
+.wb-tab:hover { color: var(--fg); }
+.wb-tab.active {
+    color: var(--primary);
+    font-weight: 600;
+}
+.wb-tab.active::after {
+    transform: scaleX(1);
+}
+
+.wb-panel {
+    padding: var(--sp-lg) var(--sp-xl);
+    background: transparent;
+    min-height: 240px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.wb-section {
+    margin-bottom: var(--sp-xl);
+}
+.wb-section:last-child { margin-bottom: 0; }
+
+.wb-section-label {
+    font: var(--type-label);
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: var(--sp-md);
+    border-left: 2px solid var(--primary);
+    padding-left: var(--sp-sm);
+}
+
+/* ── Exemplar cards ──────────────────────────────────────────────────── */
+.exemplar-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-md);
+}
+
+.exemplar-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-left: 3px solid var(--primary);
+    border-radius: var(--r-md);
+    padding: var(--sp-md);
+    flex: 1 1 280px;
+    min-width: 220px;
+    box-shadow: var(--glass-shadow-inset);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.exemplar-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(108, 142, 247, 0.4);
+}
+
+.exemplar-card span.title {
+    font: var(--type-body-strong);
+    color: var(--fg);
+    display: block;
+    margin-bottom: var(--sp-xs);
+    font-size: 13.5px;
+    line-height: 1.4;
+}
+
+.exemplar-meta {
+    font: var(--type-caption);
+    color: var(--fg-muted);
+    font-size: 11px;
+}
+
+/* ── Glossary chips (provenance) ─────────────────────────────────────── */
+.glossary-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-sm);
+}
+
+.glossary-chip {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: var(--sp-sm) var(--sp-md);
+    font-size: 12.5px;
+    box-shadow: var(--glass-shadow-inset);
+}
+.chip-en   { color: var(--fg); font-weight: 500; }
+.chip-dv   { color: var(--primary); font-size: 12px; font-weight: 500; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
+.chip-arrow { color: var(--fg-muted); }
+.chip-domain {
+    font-size: 9.5px;
+    color: var(--secondary);
+    background: rgba(56, 178, 172, 0.08);
+    border: 1px solid rgba(56, 178, 172, 0.2);
+    border-radius: var(--r-sm);
+    padding: 1px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ── Phrase contexts table ───────────────────────────────────────────── */
+.wb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+.wb-table th {
+    text-align: left;
+    font: var(--type-label);
+    color: var(--fg-dim);
+    padding: var(--sp-sm) var(--sp-md);
+    border-bottom: 1px solid var(--glass-border);
+}
+.wb-table td {
+    padding: var(--sp-sm) var(--sp-md);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: top;
+    line-height: 1.55;
+}
+.wb-table tr:last-child td { border-bottom: none; }
+.wb-table a { color: var(--info); }
+.wb-table a:hover { text-decoration: underline; }
+
+/* ── Word detail panel ───────────────────────────────────────────────── */
+.selected-word-label {
+    font: var(--type-h2);
+    color: var(--primary);
+    font-size: 18px;
+    direction: rtl;
+    display: inline-block;
+    background: rgba(108, 142, 247, 0.1);
+    padding: var(--sp-xs) var(--sp-md);
+    border-radius: var(--r-md);
+    border: 1px solid rgba(108, 142, 247, 0.2);
+}
+
+.glossary-entry {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: var(--sp-md);
+    margin-bottom: var(--sp-md);
+    box-shadow: var(--glass-shadow-inset);
+}
+.ge-pair { font-size: 14.5px; margin-bottom: var(--sp-xs); }
+.ge-en   { color: var(--fg); font-weight: 600; }
+.ge-dv   { color: var(--primary); font-size: 14px; direction: rtl; display: inline-block; margin-left: 6px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ge-meta { font: var(--type-caption); color: var(--fg-muted); display: flex; gap: var(--sp-sm); flex-wrap: wrap; align-items: center; }
+.badge-domain {
+    font-size: 9.5px;
+    padding: 2px 6px;
+    border-radius: var(--r-sm);
+    background: rgba(56, 178, 172, 0.08);
+    color: var(--secondary);
+    border: 1px solid rgba(56, 178, 172, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ── Concordance hits ────────────────────────────────────────────────── */
+.concordance-hit {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: var(--sp-md);
+    margin-bottom: var(--sp-md);
+    box-shadow: var(--glass-shadow-inset);
+}
+.concordance-snippet {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--fg);
+    margin-bottom: var(--sp-xs);
+    white-space: pre-wrap;
+}
+.concordance-snippet.thaana { direction: rtl; font-size: 14px; line-height: 1.8; }
+.concordance-meta {
+    font: var(--type-caption);
+    color: var(--fg-muted);
+}
+.concordance-meta a { color: var(--info); }
+
+/* ── Quality tab ─────────────────────────────────────────────────────── */
+.entity-check-box, .verify-box {
+    padding: var(--sp-md);
+    border-radius: var(--r-md);
+    border: 1px solid var(--glass-border);
+    border-left: 4px solid var(--glass-border);
+    margin-bottom: var(--sp-md);
+    font-size: 13.5px;
+    line-height: 1.7;
+    background: rgba(255, 255, 255, 0.02);
+}
+.entity-check-box.pass, .verify-box.pass {
+    border-left-color: var(--good);
+    background: rgba(72, 187, 120, 0.06);
+    border-color: rgba(72, 187, 120, 0.12);
+}
+.entity-check-box.fail, .verify-box.fail {
+    border-left-color: var(--lie);
+    background: rgba(245, 101, 101, 0.06);
+    border-color: rgba(245, 101, 101, 0.12);
+}
+.back-translation {
+    margin-top: 8px;
+    font-style: italic;
+    color: var(--fg-dim);
+    white-space: pre-wrap;
+}
+
+.register-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-sm);
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.register-row:last-child { border-bottom: none; }
+.reg-word {
+    font-size: 16.5px;
+    direction: rtl;
+    min-width: 180px;
+}
+.register-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+}
+
+/* ── Glossary browser tab ────────────────────────────────────────────── */
+.glossary-search-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-md);
+    margin-bottom: var(--sp-md);
+}
+.glossary-search-input {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    color: var(--fg);
+    padding: 8px 14px;
+    font: var(--type-body);
+    width: 280px;
+    transition: all 0.2s ease;
+}
+.glossary-search-input:focus {
+    border-color: var(--primary);
+    background: rgba(0,0,0,0.35);
+    box-shadow: var(--primary-glow);
+}
+.thaana-cell { direction: rtl; font-size: 13px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Confidence / frequency bars ────────────────────────────────────── */
+.conf-bar {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: var(--r-pill);
+    margin-top: 4px;
+    width: 100%;
+    overflow: hidden;
+}
+.conf-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: var(--r-pill);
+    transition: width 0.3s ease;
+}
+.freq-bar-fill { background: var(--secondary); }
+
+/* ── Thaana keyboard toggle ──────────────────────────────────────────── */
+.btn-kbd {
+    font: var(--type-caption);
+    padding: 6px 12px;
+    min-width: 32px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--fg-dim);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 11px;
+    white-space: nowrap;
+    text-align: center;
+}
+.btn-kbd:hover { color: var(--fg); border-color: rgba(255, 255, 255, 0.15); background-color: rgba(255, 255, 255, 0.08); }
+.btn-kbd.active {
+    background: var(--primary-tint);
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 0 8px rgba(108, 142, 247, 0.2);
+}
+.kbd-hint {
+    font-size: 10.5px;
+    color: var(--fg-muted);
+    margin-top: 2px;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 2px;
+    font-family: var(--font-mono);
+}
+
+/* ── Loading / empty states ──────────────────────────────────────────── */
+.wb-loading { color: var(--fg-muted); font: var(--type-caption); padding: var(--sp-md) 0; }
+.wb-empty   { color: var(--fg-muted); font: var(--type-caption); padding: var(--sp-md) 0; }
+.wb-error {
+    background: rgba(245, 101, 101, 0.08);
+    border: 1px solid var(--lie);
+    color: var(--lie);
+    padding: var(--sp-md);
+    border-radius: var(--r-sm);
+}
+
+/* ── NER entity highlighting ─────────────────────────────────────────── */
+.ner-PERSON { background: rgba(245,101,101,0.12); color: #feb2b2; border-bottom: 2px solid rgba(245,101,101,0.4); }
+.ner-ORG    { background: rgba(56,178,172,0.12);  color: #81e6d9; border-bottom: 2px solid rgba(56,178,172,0.4); }
+.ner-LOC    { background: rgba(72,187,120,0.12);  color: #9ae6b4; border-bottom: 2px solid rgba(72,187,120,0.4); }
+.ner-DATE   { background: rgba(108,142,247,0.12);  color: #c3dafe; border-bottom: 2px solid rgba(108,142,247,0.4); }
+.ner-MISC   { background: rgba(155,107,211,0.12); color: #e9d8fd; border-bottom: 2px solid rgba(155,107,211,0.4); }
+
+.ner-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-xs);
+    margin-top: var(--sp-sm);
+    padding-top: var(--sp-sm);
+    border-top: 1px solid var(--glass-border);
+}
+.ner-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+}
+.ner-pill.PERSON { background: rgba(245,101,101,0.08); color: #feb2b2; border: 1px solid rgba(245,101,101,0.25); }
+.ner-pill.ORG    { background: rgba(56,178,172,0.08);  color: #81e6d9; border: 1px solid rgba(56,178,172,0.25); }
+.ner-pill.LOC    { background: rgba(72,187,120,0.08);  color: #9ae6b4; border: 1px solid rgba(72,187,120,0.25); }
+.ner-pill.DATE   { background: rgba(108,142,247,0.08);  color: #c3dafe; border: 1px solid rgba(108,142,247,0.25); }
+.ner-pill.MISC   { background: rgba(155,107,211,0.08); color: #e9d8fd; border: 1px solid rgba(155,107,211,0.25); }
+
+/* ── Word alignment visualization ───────────────────────────────────── */
+.align-source-box {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: var(--sp-md);
+    line-height: 2.0;
+    font-size: 14.5px;
+}
+.src-word { display: inline; border-radius: var(--r-sm); padding: 2px 4px; cursor: default; transition: background 0.1s; }
+.src-word-match {
+    background: rgba(108,142,247,0.25);
+    color: var(--fg);
+    font-weight: 600;
+    border: 1px solid rgba(108,142,247,0.4);
+}
+.align-arrow { display: flex; align-items: center; gap: var(--sp-sm); margin: var(--sp-sm) 0; font: var(--type-caption); color: var(--fg-muted); }
+.align-target-word { color: var(--primary); font-size: 14px; direction: rtl; display: inline-block; font-weight: 500; }
+.align-explanation { font: var(--type-caption); color: var(--fg-dim); margin-top: var(--sp-xs); font-style: italic; }
+
+/* ── Alignment arc SVG ───────────────────────────────────────────────── */
+.alignment-arc-svg { display: block; max-width: 100%; overflow: visible; }
+.arc-src { fill: var(--fg-dim); font-size: 12.5px; font-family: var(--font-mono); }
+.arc-tgt { fill: var(--primary); font-size: 15px; font-weight: 500; }
+.alignment-svg-wrap { 
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: var(--sp-lg);
+    overflow-x: auto; 
+}
+
+/* ── Word alternatives ───────────────────────────────────────────────── */
+.alt-card { display: flex; align-items: baseline; gap: var(--sp-sm); padding: 8px var(--sp-sm); border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+.alt-card:last-child { border-bottom: none; }
+.alt-word { font-size: 16.5px; color: var(--primary); direction: rtl; display: inline-block; min-width: 120px; font-weight: 500; }
+.alt-note { font: var(--type-caption); color: var(--fg-muted); font-style: italic; }
+
+/* ── Tab word pill ───────────────────────────────────────────────────── */
+.tab-selected-word {
+    font-size: 11px; color: var(--primary); direction: rtl;
+    display: inline-block; max-width: 80px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;
+}
+
+/* ── Spell check underline ───────────────────────────────────────────── */
+.spell-error { text-decoration: underline wavy var(--lie); text-decoration-skip-ink: none; cursor: help; }
+
+/* ── Glossary-anchored token highlight ───────────────────────────────── */
+.token-anchored { border-bottom: 2px solid var(--secondary); padding-bottom: 0; }
+
+/* ── Token Map ───────────────────────────────────────────────────────── */
+.token-map-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--sp-md);
+    align-items: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: var(--sp-sm);
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+}
+.token-map-grid::-webkit-scrollbar { height: 5px; }
+.token-map-grid::-webkit-scrollbar-track { background: transparent; }
+.token-map-grid::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: var(--r-pill); }
+.token-map-grid::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+.token-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: var(--sp-md);
+    width: 130px; min-width: 110px; max-width: 150px;
+    cursor: pointer;
+    position: relative;
+    scroll-snap-align: start;
+    box-shadow: var(--glass-shadow-inset);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.token-card:hover { 
+    border-color: rgba(108, 142, 247, 0.4); 
+    background: rgba(108, 142, 247, 0.05); 
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.token-card.tc-active { 
+    border-color: var(--primary); 
+    background: rgba(108, 142, 247, 0.08); 
+    box-shadow: var(--primary-glow), var(--glass-shadow-inset); 
+}
+.token-card.tc-glossary { border-left: 3px solid var(--secondary); }
+.token-card.tc-ner      { border-left: 3px solid var(--info); }
+.token-card.tc-register { border-left: 3px solid var(--primary); }
+
+.tc-word { font-size: 13px; line-height: 1.5; direction: rtl; text-align: right; margin-bottom: 3px; color: var(--fg); font-weight: 500; }
+.tc-divider { height: 1px; background: rgba(255, 255, 255, 0.05); margin: 6px 0; }
+.tc-source { font-size: 11px; color: var(--fg-dim); margin-bottom: var(--sp-xs); min-height: 15px; }
+.tc-source-label { color: var(--fg-muted); font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
+.tc-source-words { color: var(--fg); font-weight: 500; }
+.tc-free { color: var(--fg-muted); font-style: italic; font-size: 10px; }
+
+.tc-badges { display: flex; flex-wrap: wrap; gap: 2px; min-height: 14px; }
+.tc-badge {
+    font-size: 8.5px; padding: 1px 4px; border-radius: var(--r-sm);
+    font-family: var(--font-mono); letter-spacing: 0.02em;
+    border: 1px solid transparent; white-space: nowrap;
+    text-transform: uppercase;
+}
+.tc-badge-glossary { background: rgba(56, 178, 172, 0.08); color: var(--secondary); border-color: rgba(56, 178, 172, 0.2); }
+.tc-badge-ner { background: rgba(66, 153, 225, 0.08); color: #90cdf4; border-color: rgba(66, 153, 225, 0.2); }
+
+.tc-alt-spinner { font-size: 10px; color: var(--fg-muted); margin-top: 5px; text-align: center; }
+.tc-no-alts     { font-size: 10px; color: var(--fg-muted); margin-top: 5px; font-style: italic; }
+.tc-alts { margin-top: 6px; padding-top: 5px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.tc-alt-row { display: flex; align-items: baseline; gap: 5px; padding: 2px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+.tc-alt-row:last-child { border-bottom: none; }
+.tc-alt-word { font-size: 12px; color: var(--primary); direction: rtl; display: inline-block; flex-shrink: 0; }
+.tc-alt-note { font-size: 10px; color: var(--fg-muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
+.tc-hint { position: absolute; top: 4px; right: 5px; font-size: 8px; color: var(--fg-muted); opacity: 0; transition: opacity 0.15s; }
+.token-card:hover .tc-hint { opacity: 0.6; }
+
+/* ── Back-translation word diff ─────────────────────────────────────── */
+.bt-diff-del { background: rgba(245, 101, 101, 0.15); color: var(--lie); text-decoration: line-through; padding: 0 2px; border-radius: var(--r-sm); }
+.bt-diff-ins { background: rgba(72, 187, 120, 0.15); color: var(--good); padding: 0 2px; border-radius: var(--r-sm); }
+.bt-diff-same { color: var(--fg-dim); }
+
+/* ── History panel ───────────────────────────────────────────────────── */
+.history-panel {
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-lg);
+    background: var(--glass-bg);
+    margin-bottom: var(--sp-lg);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    overflow: hidden;
+    max-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+.history-header {
+    display: flex; align-items: center; gap: var(--sp-sm);
+    padding: var(--sp-md) var(--sp-lg);
+    background: rgba(0, 0, 0, 0.15); border-bottom: 1px solid var(--glass-border);
+    cursor: pointer; user-select: none;
+}
+.history-header:hover { background: rgba(255, 255, 255, 0.02); }
+.history-header strong { font: var(--type-label); color: var(--primary); text-transform: uppercase; letter-spacing: 0.08em; }
+.history-header .btn-sm { margin-left: auto; }
+.history-run-list { display: flex; flex-direction: column; }
+.history-run-card {
+    display: grid; grid-template-columns: 1fr auto; gap: var(--sp-sm);
+    padding: var(--sp-md) var(--sp-lg);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    cursor: pointer; transition: background 0.1s;
+}
+.history-run-card:last-child { border-bottom: none; }
+.history-run-card:hover { background: rgba(108, 142, 247, 0.06); }
+.history-run-source { font-size: 13.5px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-run-meta { font: var(--type-caption); color: var(--fg-muted); font-size: 11px; margin-top: 2px; }
+.history-run-badge { font-size: 11px; padding: 2px 6px; border-radius: var(--r-sm); background: rgba(255, 255, 255, 0.05); color: var(--fg-dim); align-self: center; white-space: nowrap; border: 1px solid var(--glass-border); }
+</style>
+</head>
+<body>
+<div class="glow-orb orb-1"></div>
+<div class="glow-orb orb-2"></div>
+<header class="site">
+    <div class="brand">moonlight <span class="tag">EN↔DV translation engine</span></div>
+</header>
+
+<main x-data="workbenchApp()" x-init="init()">
+<div class="wb-wrap">
+
+    <h1 style="margin-bottom: var(--sp-xs);">Translation Workbench</h1>
+    <p class="muted" style="margin-bottom: var(--sp-lg); font: var(--type-caption);">
+        Translate EN↔DV and inspect every layer of the pipeline — exemplars, phrase contexts,
+        glossary terms, entity checks. Click any word in the output to see corpus concordance
+        and dictionary entries.
+    </p>
+
+    <!-- ── Editor row ─────────────────────────────────────────────────── -->
+    <div class="wb-editor">
+
+        <!-- Source pane -->
+        <div class="wb-pane">
+            <div class="wb-pane-label" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Source text</span>
+                <button
+                    class="btn-sm"
+                    style="font-size:10px; padding:2px 8px; border-radius:4px;"
+                    x-show="result && !editingSource"
+                    @click="editingSource = true; $nextTick(() => $refs.sourceTextarea.focus())"
+                >
+                    Edit Text
+                </button>
+            </div>
+
+            <!-- Interactive Source Reader -->
+            <div
+                class="wb-input-reader"
+                x-show="result && !editingSource"
+                @click="editingSource = true; $nextTick(() => $refs.sourceTextarea.focus())"
+            >
+                <template x-for="(tok, idx) in sourceTokens" :key="idx">
+                    <span
+                        class="src-word-interactive"
+                        :class="{ 'token-highlighted': isSourceHighlighted(tok.clean) }"
+                        @mouseenter="hoverSource(tok.clean)"
+                        @mouseleave="clearHover()"
+                        x-text="tok.text"
+                    ></span>
+                </template>
+                <div class="edit-overlay-hint">Click to edit</div>
+            </div>
+
+            <!-- Standard Textarea Input -->
+            <textarea
+                x-ref="sourceTextarea"
+                class="wb-input"
+                x-show="!result || editingSource"
+                x-model="sourceText"
+                :placeholder="thaanaKeyboard ? 'Type phonetically: h→ހ s→ސ S→ށ d→ދ D→ޑ a→ަ A→ާ i→ި I→ީ …' : 'Paste English or Dhivehi text here (up to 4000 chars)…'"
+                maxlength="4000"
+                spellcheck="true"
+                @keydown.ctrl.enter="doTranslate()"
+                @keydown.meta.enter="doTranslate()"
+            ></textarea>
+            <div class="kbd-hint" x-show="thaanaKeyboard">
+                Phonetic: h→ހ &nbsp;s→ސ &nbsp;S→ށ &nbsp;d→ދ &nbsp;D→ޑ &nbsp;t→ތ &nbsp;T→ޓ &nbsp;n→ނ &nbsp;r→ރ &nbsp;b→ބ &nbsp;k→ކ &nbsp;v→ވ &nbsp;m→މ &nbsp;f→ފ &nbsp;l→ލ &nbsp;g→ގ &nbsp;j→ޖ &nbsp;y→ޔ &nbsp;p→ޕ &nbsp;z→ޒ &nbsp;| &nbsp;a→ަ &nbsp;A→ާ &nbsp;i→ި &nbsp;I→ީ &nbsp;u→ު &nbsp;U→ޫ &nbsp;e→ެ &nbsp;E→ޭ &nbsp;o→ޮ &nbsp;O→ޯ &nbsp;q→ް
+            </div>
+            <div class="wb-controls">
+                <!-- Row 1: primary actions -->
+                <div class="wb-controls-primary">
+                    <button
+                        @click="doTranslate()"
+                        :disabled="loading || !sourceText.trim()"
+                        class="btn"
+                    >
+                        <span x-show="!loading">Translate</span>
+                        <span x-show="loading">Translating…</span>
+                    </button>
+                    <button
+                        class="btn-sm"
+                        @click="clearAll()"
+                        x-show="sourceText || result"
+                        title="Clear everything"
+                    >✕ Clear</button>
+                    <button
+                        :class="['btn-kbd', thaanaKeyboard ? 'active' : '']"
+                        @click="toggleThaanaKeyboard()"
+                        title="Toggle Dhivehi phonetic keyboard"
+                    >⌨</button>
+                    <span
+                        class="char-count"
+                        style="margin-left:auto;"
+                        :class="{'danger': charCount > 3800}"
+                        x-text="charCount + ' / 4000'"
+                    ></span>
+                    <button
+                        class="btn-sm"
+                        @click="toggleHistory()"
+                        title="Browse recent translations"
+                    >⏱ History</button>
+                </div>
+                <!-- Row 2: options -->
+                <div class="wb-controls-secondary">
+                    <select x-model="targetLang" title="Target language">
+                        <option value="auto">auto</option>
+                        <option value="EN">English</option>
+                        <option value="DV">Dhivehi</option>
+                    </select>
+                    <select x-model="mode" title="Translation mode">
+                        <option value="faithful">faithful</option>
+                        <option value="po_style">po_style</option>
+                    </select>
+                    <select x-model="model" title="Model — sonnet = default, opus = better quality 5× cost">
+                        <option value="sonnet">sonnet</option>
+                        <option value="opus">opus (5×)</option>
+                    </select>
+                    <select x-model.number="nCandidates" title="Best-of-N scoring: 1=off, 2=pick best of 2, 3=best quality ~3× cost">
+                        <option :value="1">N=1</option>
+                        <option :value="2">N=2</option>
+                        <option :value="3">N=3 best</option>
+                    </select>
+                    <label class="verify-label" title="Back-translate to verify entity preservation. Doubles cost.">
+                        <input type="checkbox" x-model="verify"> Verify
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Output pane -->
+        <div class="wb-pane">
+            <div class="wb-pane-label">
+                <span x-show="!result">Translation output</span>
+                <span x-show="result" x-text="(result?.source_lang || '') + ' → ' + (result?.target_lang || '')"></span>
+                <span x-show="result && wordCount"
+                      style="font-size:10px;color:var(--fg-muted);"
+                      x-text="(sourceWordCount ? sourceWordCount + '→' : '') + wordCount + ' words'"></span>
+                <span
+                    class="entity-badge pass"
+                    x-show="entityCheck?.passed === true"
+                    title="All numbers and entities preserved"
+                >✓ entities</span>
+                <span
+                    class="entity-badge fail"
+                    x-show="entityCheck && entityCheck.passed === false"
+                    :title="entityCheck?.summary || 'Entity check failed'"
+                >⚠ entities</span>
+                <!-- Fluency score badge -->
+                <span
+                    x-show="fluencyScore !== null && !fluencyLoading"
+                    style="font-size:10px;padding:2px 6px;border-radius:var(--r-pill);cursor:default;"
+                    :style="fluencyScore >= 75 ? 'background:rgba(91,199,135,0.12);color:var(--good);border:1px solid rgba(91,199,135,0.3);' : fluencyScore >= 50 ? 'background:rgba(91,168,213,0.12);color:#8dc8e8;border:1px solid rgba(91,168,213,0.3);' : 'background:rgba(240,160,75,0.12);color:var(--deadline);border:1px solid rgba(240,160,75,0.3);'"
+                    :title="'Fluency score: ' + fluencyScore + '/100 (perplexity: ' + fluencyPerplexity + ') — lower perplexity = more natural Dhivehi'"
+                    x-text="'✦ ' + fluencyScore + '%'"
+                ></span>
+                <span x-show="fluencyLoading" style="font:var(--type-caption);color:var(--fg-muted);">fluency…</span>
+            </div>
+
+            <div class="wb-output-box" x-show="!result && !loading && !error">
+                <span class="wb-empty">Translation will appear here. Click any word to analyze it.</span>
+            </div>
+            <div class="wb-output-box" x-show="loading">
+                <span class="wb-loading">Translating…</span>
+            </div>
+            <div class="wb-error" x-show="error" x-text="error"></div>
+
+            <!-- Tokenized output -->
+            <div
+                class="wb-output-box"
+                :class="{ 'thaana': isDV }"
+                x-show="result && !loading && !error"
+            >
+                <template x-for="(tok, i) in tokens" :key="i">
+                    <span style="display: inline-block; white-space: nowrap; margin: 1px 0;">
+                        <span
+                            :class="['dv-token',
+                                     tok.register?.cls || '',
+                                     entityTypeOf(tok.clean) ? 'ner-' + entityTypeOf(tok.clean) : '',
+                                     isSpellingIssue(tok.clean) ? 'spell-error' : '',
+                                     showGlossaryAnchors && isGlossaryAnchored(tok.clean) ? 'token-anchored' : '',
+                                     isTargetHighlighted(tok.clean) ? 'token-highlighted' : '',
+                                     selectedWord === tok.clean ? 'token-selected' : '']"
+                            @click="selectWord(tok.text)"
+                            @mouseenter="hoverTarget(tok.clean)"
+                            @mouseleave="clearHover()"
+                            x-text="tok.text"
+                            :title="isSpellingIssue(tok.clean) ? spellSuggestionFor(tok.clean) : (entityTypeOf(tok.clean) ? entityTypeOf(tok.clean) + ' · ' : '') + (tok.register ? tok.register.label + ' register' : 'Click to inspect')"
+                        ></span><template x-if="tok.register"><span
+                            :class="['reg-badge', tok.register.cls]"
+                            x-text="tok.register.label"
+                        ></span></template>
+                    </span><!--
+                    --><template x-if="i < tokens.length - 1"><span> </span></template>
+                </template>
+                <!-- NER entity legend -->
+                <div class="ner-legend" x-show="nerEntities.length">
+                    <template x-for="ent in nerEntities" :key="ent.text + ent.type">
+                        <span :class="['ner-pill', ent.type]">
+                            <span x-text="ent.text"></span>
+                            <span style="opacity:.6;font-size:9px;" x-text="ent.type"></span>
+                        </span>
+                    </template>
+                    <span x-show="nerTypeSummary.length > 1"
+                          style="margin-left:auto;display:flex;gap:3px;flex-wrap:wrap;align-items:center;">
+                        <template x-for="ts in nerTypeSummary" :key="ts.type">
+                            <span :class="['ner-pill', ts.type]"
+                                  :title="ts.count + ' ' + ts.type + ' entit' + (ts.count === 1 ? 'y' : 'ies')">
+                                <span x-text="ts.type"></span>
+                                <span style="font-size:9px;font-weight:700;opacity:.8;" x-text="ts.count"></span>
+                            </span>
+                        </template>
+                    </span>
+                </div>
+                <div x-show="nerLoading && !nerEntities.length"
+                     style="font:var(--type-caption);color:var(--fg-muted);margin-top:var(--sp-xs);">
+                    Detecting entities…
+                </div>
+            </div>
+
+            <div class="wb-output-actions" x-show="result && !loading">
+                <button class="btn-sm" @click="copyTranslation()">Copy</button>
+                <button class="btn-sm" @click="downloadTranslation()">↓ .txt</button>
+                <button class="btn-sm" @click="exportJSON()" title="Download full analysis bundle as JSON">↓ JSON</button>
+                <button
+                    class="btn-sm"
+                    @click="runSpellCheck()"
+                    :disabled="spellLoading"
+                    x-show="isDV"
+                    title="Run Dhivehi spell checker on the translation"
+                    x-text="spellLoading ? 'Checking…' : (spellDone ? 'Recheck' : '✓ Spell')"
+                ></button>
+                <button
+                    class="btn-sm"
+                    @click="showGlossaryAnchors = !showGlossaryAnchors"
+                    x-show="result?.glossary_terms?.length"
+                    :style="showGlossaryAnchors ? 'color:var(--secondary);border-color:var(--secondary);' : ''"
+                    title="Underline glossary-anchored terms"
+                    x-text="showGlossaryAnchors ? '⚓ Hide anchors' : '⚓ Anchors'"
+                ></button>
+                <button
+                    class="btn-sm"
+                    @click="speakTranslation()"
+                    :style="speaking ? 'color:var(--primary)' : ''"
+                    title="Read translation aloud"
+                    x-show="!!window.speechSynthesis"
+                    x-text="speaking ? '⏹ Stop' : '🔊 Listen'"
+                ></button>
+                <span class="wb-meta" x-text="fmtCost(result?.cost_usd) + (result?.cache_hit ? ' (cached)' : '') + ' · ' + (result?.model || '')"></span>
+            </div>
+        </div>
+
+    </div><!-- /.wb-editor -->
+
+    <!-- ── History panel ────────────────────────────────────────────────── -->
+    <div class="history-panel" x-show="historyOpen">
+        <div class="history-header" @click="historyOpen = false">
+            <strong>Recent translations</strong>
+            <span style="font: var(--type-caption); color: var(--fg-muted);" x-text="historyRuns.length ? historyRuns.length + ' runs' : ''"></span>
+            <button class="btn-sm" style="margin-left:auto;" @click.stop="historyOpen = false">✕ Close</button>
+            <button class="btn-sm" @click.stop="loadHistory()" :disabled="historyLoading">↺ Refresh</button>
+        </div>
+        <div class="wb-loading" x-show="historyLoading" style="padding: var(--sp-md);">Loading history…</div>
+        <div class="wb-empty" x-show="!historyLoading && !historyRuns.length" style="padding: var(--sp-md);">
+            No translation history found.
+        </div>
+        <div class="history-run-list" x-show="!historyLoading && historyRuns.length" style="max-height:280px;overflow-y:auto;">
+            <template x-for="run in historyRuns" :key="run.id">
+                <div class="history-run-card" @click="loadHistoryRun(run)" title="Click to reload this translation">
+                    <div style="min-width:0;">
+                        <div class="history-run-source" x-text="run.source_text"></div>
+                        <div class="history-run-meta" x-show="run.translation"
+                             style="direction:rtl;text-align:right;color:var(--primary);font-size:12px;margin-top:1px;"
+                             x-text="(run.translation || '').slice(0,60) + ((run.translation || '').length > 60 ? '…' : '')">
+                        </div>
+                        <div class="history-run-meta">
+                            <span x-text="(run.source_lang || 'EN') + '→' + run.target_lang"></span> ·
+                            <span x-text="run.model || ''"></span> ·
+                            <span x-text="fmtCost(run.cost_usd)"></span> ·
+                            <span x-text="(run.created_at || '').slice(0,16).replace('T',' ')"></span>
+                        </div>
+                    </div>
+                    <span class="history-run-badge" x-text="(run.source_lang || 'EN') + '→' + run.target_lang"></span>
+                </div>
+            </template>
+        </div>
+        <div x-show="!historyLoading && historyRuns.length > 1"
+             style="padding:var(--sp-xs) var(--sp-md) var(--sp-sm);border-top:1px solid var(--border);background:var(--surface);">
+            <div style="font-size:10px;color:var(--fg-muted);margin-bottom:3px;">
+                Cost trend · <span x-text="Math.min(historyRuns.length,20)"></span> runs (oldest→newest)
+            </div>
+            <div x-html="costSparkline"></div>
+        </div>
+    </div>
+
+    <!-- ── Token Map ─────────────────────────────────────────────────────── -->
+    <div x-show="tokens.length" style="margin-bottom:var(--sp-lg);">
+        <div style="display:flex;align-items:center;gap:var(--sp-md);margin-bottom:var(--sp-sm);">
+            <span style="font:var(--type-caption);color:var(--fg-dim);text-transform:uppercase;letter-spacing:.05em;">
+                Word breakdown
+                <span style="font-weight:normal;opacity:.6;" x-text="'— ' + tokens.length + ' tokens'"></span>
+            </span>
+            <span style="font-size:11px;color:var(--fg-muted);">
+                <span class="tc-badge tc-badge-glossary">gloss</span> corpus-locked ·
+                <span class="tc-badge tc-badge-ner">NER</span> entity ·
+                <span class="reg-badge badge-blue" style="font-size:8px;padding:1px 4px;">formal</span> register
+            </span>
+            <span x-show="batchAlignLoading" style="font-size:11px;color:var(--fg-muted);margin-left:auto;">
+                Computing alignment…
+            </span>
+            <span x-show="!batchAlignLoading && batchAlignment.length"
+                  style="font-size:11px;color:var(--fg-muted);margin-left:auto;">
+                Click any word to see alternatives
+            </span>
+        </div>
+
+        <div class="token-map-grid">
+            <template x-for="tok in tokens" :key="tok.text + tok.clean">
+                <div
+                    class="token-card"
+                    :class="{
+                        'tc-active':   hasLoadedCard(tok.clean),
+                        'tc-glossary': isGlossaryAnchored(tok.clean),
+                        'tc-ner':      !!entityTypeOf(tok.clean) && !isGlossaryAnchored(tok.clean),
+                        'tc-register': !!tok.register && !isGlossaryAnchored(tok.clean) && !entityTypeOf(tok.clean),
+                        'tc-hovered':  isTargetHighlighted(tok.clean)
+                    }"
+                    @click="selectCard(tok)"
+                    @mouseenter="hoverTarget(tok.clean)"
+                    @mouseleave="clearHover()"
+                    :title="hasLoadedCard(tok.clean) ? 'Click to hide alternatives' : 'Click to load alternatives'"
+                >
+                    <span class="tc-hint">alts</span>
+                    <div class="tc-word" x-text="tok.text"></div>
+                    <div class="tc-divider"></div>
+                    <div class="tc-source">
+                        <template x-if="sourceWordsFor(tok.clean).length">
+                            <span>
+                                <span class="tc-source-label">↑ </span>
+                                <span class="tc-source-words" x-text="sourceWordsFor(tok.clean).join(' · ')"></span>
+                            </span>
+                        </template>
+                        <template x-if="!sourceWordsFor(tok.clean).length && !batchAlignLoading">
+                            <span class="tc-free">unaligned</span>
+                        </template>
+                        <template x-if="batchAlignLoading">
+                            <span class="tc-free">…</span>
+                        </template>
+                    </div>
+                    <div class="tc-badges">
+                        <span x-show="isGlossaryAnchored(tok.clean)" class="tc-badge tc-badge-glossary">gloss</span>
+                        <span x-show="entityTypeOf(tok.clean)" class="tc-badge tc-badge-ner" x-text="entityTypeOf(tok.clean)"></span>
+                        <span x-show="tok.register" :class="['tc-badge reg-badge', tok.register?.cls]" x-text="tok.register?.label"></span>
+                    </div>
+                    <div class="tc-alt-spinner" x-show="cardAltLoading[tok.clean]">loading…</div>
+                    <div class="tc-alts" x-show="hasLoadedCard(tok.clean) && cardAlternatives[tok.clean]?.length">
+                        <template x-for="alt in (cardAlternatives[tok.clean] || [])" :key="alt.text">
+                            <div class="tc-alt-row">
+                                <span class="tc-alt-word" x-text="alt.text"></span>
+                                <span class="tc-alt-note" :title="alt.note" x-text="alt.note"></span>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="tc-no-alts"
+                         x-show="hasLoadedCard(tok.clean) && !cardAlternatives[tok.clean]?.length && !cardAltLoading[tok.clean]">
+                        no alternatives
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- ── Analysis panel ─────────────────────────────────────────────── -->
+    <div class="wb-analysis">
+
+        <div class="wb-tabs" role="tablist">
+            <button class="wb-tab" :class="{active: activeTab === 'provenance'}"
+                    @click="activeTab = 'provenance'" role="tab">Provenance</button>
+            <button class="wb-tab" :class="{active: activeTab === 'word-detail'}"
+                    @click="activeTab = 'word-detail'" role="tab">
+                Word Detail
+                <span x-show="selectedWord" class="tab-selected-word" x-text="' ' + selectedWord"></span>
+            </button>
+            <button class="wb-tab" :class="{active: activeTab === 'phrases'}"
+                    @click="activeTab = 'phrases'" role="tab">
+                Phrases
+                <span x-show="result?.phrase_contexts?.length"
+                      style="font-size:10px; opacity:.6;" x-text="' (' + (result?.phrase_contexts?.length || 0) + ')'"></span>
+            </button>
+            <button class="wb-tab" :class="{active: activeTab === 'quality'}"
+                    @click="activeTab = 'quality'" role="tab">Quality</button>
+            <button class="wb-tab" :class="{active: activeTab === 'alignment'}"
+                    @click="activeTab = 'alignment'" role="tab">
+                Alignment
+                <span x-show="batchAlignLoading" style="font-size:10px;opacity:.5;"> ●</span>
+            </button>
+            <button class="wb-tab" :class="{active: activeTab === 'neural-net'}"
+                    @click="activeTab = 'neural-net'; $nextTick(() => initNeuralNet())" role="tab">
+                Neural Net
+            </button>
+            <button class="wb-tab" :class="{active: activeTab === 'glossary'}"
+                    @click="activeTab = 'glossary'; searchGlossary()" role="tab">
+                Glossary
+            </button>
+            <button class="wb-tab" :class="{active: activeTab === 'benchmarks'}"
+                    @click="activeTab = 'benchmarks'; if(!benchmarks && !benchmarksLoading) loadBenchmarks()" role="tab">
+                Benchmarks
+                <span x-show="benchmarksLoading" style="font-size:10px;opacity:.5;"> ●</span>
+            </button>
+        </div>
+
+        <!-- ── PROVENANCE TAB ──────────────────────────────────────── -->
+        <div class="wb-panel" x-show="activeTab === 'provenance'" role="tabpanel">
+
+            <div class="wb-section">
+                <div class="wb-section-label">Few-shot exemplars</div>
+                <div class="exemplar-cards" x-show="result?.exemplars?.length">
+                    <template x-for="ex in (result?.exemplars || [])" :key="ex.en_article_id">
+                        <div class="exemplar-card">
+                            <span class="title" x-text="ex.title || '(untitled)'"></span>
+                            <div class="exemplar-meta">
+                                <span x-text="ex.published_date || ''"></span>
+                                · article #<span x-text="ex.en_article_id"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="wb-empty" x-show="!result?.exemplars?.length">No exemplars returned.</div>
+            </div>
+
+            <div class="wb-section" x-show="result?.glossary_terms?.length">
+                <div class="wb-section-label">
+                    Glossary terms injected
+                    (<span x-text="result?.glossary_terms?.length || 0"></span>)
+                </div>
+                <div style="display:flex;align-items:center;gap:var(--sp-sm);margin-bottom:var(--sp-sm);" x-show="sourceWordCount">
+                    <span style="font-size:11px;color:var(--fg-dim);">Coverage:</span>
+                    <span style="font-size:11px;color:var(--primary);"
+                          x-text="(result?.glossary_terms?.length||0) + ' of ' + sourceWordCount + ' source words'"></span>
+                    <div class="conf-bar" style="flex:1;max-width:120px;height:5px;">
+                        <div class="conf-bar-fill"
+                             :style="'width:' + Math.min(100,Math.round(((result?.glossary_terms?.length||0)/Math.max(1,sourceWordCount))*100)) + '%'">
+                        </div>
+                    </div>
+                </div>
+                <div class="glossary-chips">
+                    <template x-for="gt in (result?.glossary_terms || [])" :key="gt.en_term">
+                        <span class="glossary-chip" style="flex-direction:column; align-items:flex-start;">
+                            <span style="display:flex;align-items:center;gap:4px;">
+                                <span class="chip-en" x-text="gt.en_term"></span>
+                                <span class="chip-arrow">→</span>
+                                <span class="chip-dv" x-text="gt.dv_term"></span>
+                                <span class="chip-domain" x-show="gt.domain" x-text="gt.domain"></span>
+                            </span>
+                            <div class="conf-bar" :title="'confidence: ' + fmtConf(gt.confidence)">
+                                <div class="conf-bar-fill" :style="'width:' + Math.round((gt.confidence||0)*100) + '%'"></div>
+                            </div>
+                        </span>
+                    </template>
+                </div>
+            </div>
+
+            <div class="wb-section" x-show="result?.phrase_contexts?.length">
+                <div class="wb-section-label">Phrase contexts retrieved</div>
+                <table class="wb-table">
+                    <thead><tr><th>Noun phrase (from source)</th><th>Corpus article</th></tr></thead>
+                    <tbody>
+                        <template x-for="pc in (result?.phrase_contexts || [])" :key="pc.phrase">
+                            <tr>
+                                <td x-text="pc.phrase"></td>
+                                <td x-text="'#' + pc.article_id"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="wb-section" x-show="result?.sentence_memory_used?.length">
+                <div class="wb-section-label">Sentence translation memory hits</div>
+                <table class="wb-table">
+                    <thead><tr><th>Source article</th><th>Paired article</th></tr></thead>
+                    <tbody>
+                        <template x-for="sm in (result?.sentence_memory_used || [])"
+                                  :key="sm.source_article_id">
+                            <tr>
+                                <td x-text="'#' + sm.source_article_id"></td>
+                                <td x-text="'#' + sm.paired_article_id"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="wb-section">
+                <div class="wb-section-label">Run metadata</div>
+                <div style="font: var(--type-caption); color: var(--fg-dim); display: flex; flex-wrap: wrap; gap: var(--sp-lg);">
+                    <span><strong>Model:</strong> <code x-text="result?.model || '—'"></code></span>
+                    <span><strong>Mode:</strong> <code x-text="result?.mode || '—'"></code></span>
+                    <span><strong>Cost:</strong> <span x-text="fmtCost(result?.cost_usd)"></span></span>
+                    <span x-show="result?.cache_hit"><strong>Cached:</strong> yes</span>
+                    <span x-show="result?.n_candidates > 1">
+                        <strong>Candidates scored:</strong> <span x-text="result?.n_candidates"></span>
+                    </span>
+                    <span x-show="result?.tokens_in">
+                        <strong>Tokens:</strong>
+                        <span x-text="(result?.tokens_in || 0).toLocaleString() + ' in / ' + (result?.tokens_out || 0).toLocaleString() + ' out'"></span>
+                    </span>
+                    <span x-show="result?.terms_locked > 0">
+                        <strong>Term locks:</strong>
+                        <span x-text="result?.terms_locked + ' locked'"></span>
+                        <span x-show="result?.lock_misses?.length" style="color:var(--deadline);"
+                              x-text="' · ' + result?.lock_misses?.length + ' missed: ' + (result?.lock_misses || []).join(', ')"></span>
+                    </span>
+                </div>
+            </div>
+
+        </div><!-- /provenance -->
+
+        <!-- ── WORD DETAIL TAB ─────────────────────────────────────── -->
+        <div class="wb-panel" x-show="activeTab === 'word-detail'" role="tabpanel">
+
+            <div class="wb-empty" x-show="!selectedWord">
+                Click any word in the translation output above to inspect it.
+            </div>
+
+            <div x-show="selectedWord">
+                <div class="wb-section">
+                    <div class="wb-section-label">Selected word</div>
+                    <span class="selected-word-label" x-text="selectedWord"></span>
+                </div>
+
+                <div class="wb-section" x-show="sourceText && result?.translation">
+                    <div class="wb-section-label">
+                        Source alignment
+                        <span x-show="alignLoading" style="opacity:.5;font-weight:normal;"> — looking up…</span>
+                        <span x-show="!alignLoading && alignedSourceWords.length"
+                              style="opacity:.6;font-weight:normal;"
+                              x-text="' — ' + alignedSourceWords.length + ' word(s) matched'"></span>
+                    </div>
+                    <div class="align-source-box" x-show="sourceTokens.length">
+                        <template x-for="(tok, i) in sourceTokens" :key="i">
+                            <span>
+                                <span
+                                    :class="['src-word', isAligned(tok.clean) ? 'src-word-match' : '']"
+                                    x-text="tok.text"
+                                    :title="isAligned(tok.clean) ? 'corresponds to: ' + selectedWord : ''"
+                                ></span><span x-show="i < sourceTokens.length - 1"> </span>
+                            </span>
+                        </template>
+                    </div>
+                    <div x-show="!alignLoading && alignedSourceWords.length" class="align-arrow">
+                        <span>↑ corresponds to</span>
+                        <span class="align-target-word" x-text="selectedWord"></span>
+                    </div>
+                    <div class="align-explanation" x-show="!alignLoading && alignExplanation" x-text="alignExplanation"></div>
+                    <div class="wb-empty" x-show="!alignLoading && !alignedSourceWords.length && sourceTokens.length">
+                        No source alignment found for this word.
+                    </div>
+                </div>
+
+                <div class="wb-loading" x-show="wordLoading">Loading concordance and glossary…</div>
+
+                <div x-show="!wordLoading">
+
+                    <div class="wb-section">
+                        <div class="wb-section-label">Glossary entries</div>
+                        <div x-show="wordGlossary.length">
+                            <template x-for="gt in wordGlossary" :key="gt.id">
+                                <div class="glossary-entry">
+                                    <div class="ge-pair">
+                                        <span class="ge-en" x-text="gt.en_term"></span>
+                                        <span style="color: var(--fg-muted);"> → </span>
+                                        <span class="ge-dv" x-text="gt.dv_term"></span>
+                                    </div>
+                                    <div class="ge-meta">
+                                        <span class="badge-domain" x-show="gt.domain" x-text="gt.domain"></span>
+                                        <span x-text="'freq: ' + (gt.freq || 0)"></span>
+                                        <span x-text="'conf: ' + fmtConf(gt.confidence)"></span>
+                                    </div>
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;">
+                                        <div>
+                                            <div style="font-size:9px;color:var(--fg-muted);margin-bottom:2px;">CONFIDENCE</div>
+                                            <div class="conf-bar"><div class="conf-bar-fill" :style="'width:'+Math.round((gt.confidence||0)*100)+'%'"></div></div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size:9px;color:var(--fg-muted);margin-bottom:2px;">CORPUS FREQ</div>
+                                            <div class="conf-bar"><div class="conf-bar-fill freq-bar-fill" :style="'width:'+Math.min(100,Math.round((gt.freq||0)/10))+'%'"></div></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="wb-empty" x-show="!wordGlossary.length">Not found in the EN↔DV glossary.</div>
+                    </div>
+
+                    <div class="wb-section">
+                        <div class="wb-section-label">Alternative translations</div>
+                        <div class="wb-loading" x-show="altLoading">Loading alternatives…</div>
+                        <div x-show="!altLoading && wordAlternatives.length">
+                            <template x-for="alt in wordAlternatives" :key="alt.text">
+                                <div class="alt-card">
+                                    <span class="alt-word" x-text="alt.text"></span>
+                                    <span class="alt-note" x-text="alt.note"></span>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="wb-empty" x-show="!altLoading && !wordAlternatives.length">No alternatives found.</div>
+                    </div>
+
+                    <div class="wb-section">
+                        <div class="wb-section-label">
+                            Corpus concordance
+                            (<span x-text="wordConcordance.length"></span> results)
+                        </div>
+                        <div x-show="wordConcordance.length">
+                            <template x-for="hit in wordConcordance" :key="hit.article_id">
+                                <div class="concordance-hit">
+                                    <div
+                                        :class="['concordance-snippet', hit.language === 'DV' ? 'thaana' : '']"
+                                        x-text="hit.snippet"
+                                    ></div>
+                                    <div class="concordance-meta">
+                                        <span x-text="hit.title || ('#' + hit.article_id)"></span>
+                                        <span x-text="hit.published_date ? ' · ' + hit.published_date : ''"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="wb-empty" x-show="!wordConcordance.length">No corpus matches found for this word.</div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div><!-- /word-detail -->
+
+        <!-- ── PHRASES TAB ────────────────────────────────────────── -->
+        <div class="wb-panel" x-show="activeTab === 'phrases'" role="tabpanel">
+
+            <p style="font: var(--type-caption); color: var(--fg-dim); margin-bottom: var(--sp-md);">
+                Capitalised noun phrases from the source were looked up in the corpus to give
+                the model usage context for institutional terminology. These phrase contexts
+                were injected into the translation prompt alongside the few-shot exemplars.
+            </p>
+
+            <div class="wb-empty" x-show="!result">Translate a sentence first.</div>
+
+            <div class="wb-empty" x-show="result && !result?.phrase_contexts?.length">
+                No phrase contexts for this translation — either the source has no multi-word
+                capitalised phrases, or no corpus matches were found.
+            </div>
+
+            <div x-show="result?.phrase_contexts?.length">
+                <template x-for="pc in (result?.phrase_contexts || [])" :key="pc.phrase">
+                    <div style="margin-bottom: var(--sp-lg); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden;">
+                        <div style="display:flex; align-items:center; gap:var(--sp-sm); padding: var(--sp-sm) var(--sp-md); background: var(--surface-2); border-bottom: 1px solid var(--border);">
+                            <span style="font:var(--type-caption); font-weight:700; color:var(--primary);" x-text="'«' + pc.phrase + '»'"></span>
+                            <span style="font:var(--type-caption); color:var(--fg-muted); margin-left:auto;"
+                                  x-text="'Article #' + pc.article_id + (pc.paired_id ? ' ↔ #' + pc.paired_id : '')"></span>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0;">
+                            <div style="padding:var(--sp-sm) var(--sp-md); border-right:1px solid var(--border);">
+                                <div style="font:var(--type-caption); color:var(--fg-dim); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">EN source</div>
+                                <p style="font-size:13px; line-height:1.6; margin:0; color:var(--fg);" x-text="pc.source_snippet || '—'"></p>
+                            </div>
+                            <div style="padding:var(--sp-sm) var(--sp-md);">
+                                <div style="font:var(--type-caption); color:var(--fg-dim); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">DV parallel</div>
+                                <p style="font-size:14px; line-height:1.9; margin:0; direction:rtl; color:var(--fg);" x-text="pc.target_snippet || '—'"></p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+        </div><!-- /phrases -->
+
+        <!-- ── QUALITY TAB ────────────────────────────────────────── -->
+        <div class="wb-panel" x-show="activeTab === 'quality'" role="tabpanel">
+
+            <div class="wb-section">
+                <div class="wb-section-label">Entity preservation check</div>
+                <div x-show="entityCheck">
+                    <div :class="['entity-check-box', entityCheck?.passed ? 'pass' : 'fail']">
+                        <strong x-text="entityCheck?.passed
+                            ? '✓ Passed — numbers and entities preserved'
+                            : '⚠ Issues detected'"></strong>
+                        <div x-show="entityCheck?.summary" style="margin-top:4px;" x-text="entityCheck?.summary"></div>
+                        <div x-show="entityCheck?.missing_numbers?.length">
+                            <strong>Numbers missing:</strong>
+                            <span x-text="(entityCheck?.missing_numbers || []).join(', ')"></span>
+                        </div>
+                        <div x-show="entityCheck?.extra_numbers?.length">
+                            <strong>Numbers added:</strong>
+                            <span x-text="(entityCheck?.extra_numbers || []).join(', ')"></span>
+                        </div>
+                        <div x-show="entityCheck?.missing_entities?.length">
+                            <strong>Entities missing:</strong>
+                            <span x-text="(entityCheck?.missing_entities || []).join(', ')"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="wb-empty" x-show="!entityCheck">Entity check data not available.</div>
+            </div>
+
+            <div class="wb-section" x-show="isDV">
+                <div class="wb-section-label">
+                    Register analysis (verb suffix scan)
+                    <span x-show="registeredTokens.length" style="font-weight:normal; opacity:.7;"
+                          x-text="' — ' + registeredTokens.length + ' verb form(s) detected'"></span>
+                </div>
+                <div x-show="registeredTokens.length">
+                    <div x-show="registerDistribution.length && tokens.length" style="margin-bottom:var(--sp-md);">
+                        <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:1px;margin-bottom:5px;">
+                            <template x-for="seg in registerDistribution" :key="seg.cls">
+                                <div :style="'flex:' + seg.count + ';min-width:4px;background:' + regBarColor(seg.cls)"
+                                     :title="seg.label + ': ' + seg.count + ' token(s)'"></div>
+                            </template>
+                            <div x-show="tokens.length > registeredTokens.length"
+                                 :style="'flex:' + (tokens.length - registeredTokens.length) + ';min-width:4px;background:rgba(107,130,154,0.15);'"
+                                 :title="'unclassified: ' + (tokens.length - registeredTokens.length)"></div>
+                        </div>
+                        <div style="display:flex;gap:var(--sp-md);flex-wrap:wrap;align-items:center;">
+                            <template x-for="seg in registerDistribution" :key="seg.cls">
+                                <span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--fg-dim);">
+                                    <span :class="['reg-badge', seg.cls]" style="font-size:8px;padding:1px 4px;" x-text="seg.label"></span>
+                                    <span x-text="seg.count + ' token' + (seg.count !== 1 ? 's' : '')"></span>
+                                </span>
+                            </template>
+                            <span x-show="tokens.length > registeredTokens.length"
+                                  style="font-size:10px;color:var(--fg-muted);"
+                                  x-text="(tokens.length - registeredTokens.length) + ' neutral'"></span>
+                        </div>
+                    </div>
+                    <div x-show="registeredTokens.filter(t=>t.register.cls==='badge-purple' || t.register.cls==='badge-blue').length"
+                         style="font: var(--type-caption); color: var(--fg-dim); margin-bottom: var(--sp-sm);">
+                        ✓ Formal/honorific register detected — consistent with PO press-release style.
+                    </div>
+                    <div x-show="registeredTokens.filter(t=>t.register.cls==='badge-amber').length"
+                         style="font: var(--type-caption); color: var(--deadline); margin-bottom: var(--sp-sm);">
+                        ⚠ Perfective forms (-ވެއްޖެ) detected — informal register, may not match PO style.
+                    </div>
+                    <div class="register-scan">
+                        <template x-for="tok in registeredTokens" :key="tok.text + tok.register.label">
+                            <div class="register-row">
+                                <span class="reg-word thaana" x-text="tok.text"></span>
+                                <span :class="['register-badge', tok.register.cls]" x-text="tok.register.label"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="wb-empty" x-show="!registeredTokens.length">
+                    No recognizable verb suffix patterns detected in this output.
+                </div>
+            </div>
+
+            <div class="wb-section" x-show="isDV">
+                <div class="wb-section-label">
+                    Dhivehi spell check
+                    <span x-show="spellDone && !spellIssues.length" style="color:var(--good);font-weight:normal;"> — no issues found</span>
+                    <span x-show="spellIssues.length" style="color:var(--deadline);font-weight:normal;"
+                          x-text="' — ' + spellIssues.length + ' issue(s)'"></span>
+                </div>
+                <div class="wb-loading" x-show="spellLoading">Running spell check…</div>
+                <div x-show="!spellLoading && !spellDone" class="wb-empty">
+                    Click <strong>✓ Spell</strong> in the output actions above to check the translation.
+                </div>
+                <div x-show="!spellLoading && spellDone && spellIssues.length">
+                    <table class="wb-table">
+                        <thead><tr><th>Word</th><th>Suggestion</th><th>Reason</th></tr></thead>
+                        <tbody>
+                            <template x-for="issue in spellIssues" :key="issue.word">
+                                <tr>
+                                    <td class="thaana-cell" style="color:var(--lie);" x-text="issue.word"></td>
+                                    <td class="thaana-cell" style="color:var(--good);" x-text="issue.suggestion"></td>
+                                    <td style="color:var(--fg-dim);" x-text="issue.reason"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="wb-empty" x-show="!spellLoading && spellDone && !spellIssues.length">
+                    Translation looks clean — no spelling errors detected.
+                </div>
+            </div>
+
+            <div class="wb-section">
+                <div class="wb-section-label">Back-translation verification</div>
+                <div x-show="result?.verification">
+                    <div :class="['verify-box', result?.verification?.passed ? 'pass' : 'fail']">
+                        <strong x-text="result?.verification?.passed ? '✓ Passed' : '✗ Failed'"></strong>
+                        <div x-show="result?.verification?.numbers_lost?.length">
+                            Numbers lost: <span x-text="(result?.verification?.numbers_lost || []).join(', ')"></span>
+                        </div>
+                        <div x-show="result?.verification?.proper_nouns_lost?.length">
+                            Proper nouns lost: <span x-text="(result?.verification?.proper_nouns_lost || []).join(', ')"></span>
+                        </div>
+                        <div x-show="backTranslationDiff.length" style="margin-top:10px;">
+                            <div style="font-size:11px;color:var(--fg-muted);margin-bottom:5px;">
+                                Diff vs source
+                                <span style="margin-left:8px;display:inline-flex;gap:6px;align-items:center;">
+                                    <span class="bt-diff-del" style="font-size:10px;">lost</span>
+                                    <span class="bt-diff-ins" style="font-size:10px;">added</span>
+                                </span>
+                            </div>
+                            <div class="back-translation" style="line-height:1.9;">
+                                <template x-for="(tok, i) in backTranslationDiff" :key="i">
+                                    <span :class="'bt-diff-' + tok.type" x-text="tok.text + ' '"></span>
+                                </template>
+                            </div>
+                        </div>
+                        <div x-show="!backTranslationDiff.length && result?.verification?.back_translation"
+                             class="back-translation"
+                             x-text="(result?.verification?.back_translation || '').slice(0, 600)"></div>
+                    </div>
+                </div>
+                <div class="wb-empty" x-show="!result?.verification">
+                    Enable <em>Verify</em> above and re-translate to run back-translation quality check.
+                </div>
+            </div>
+
+        </div><!-- /quality -->
+
+        <!-- ── ALIGNMENT TAB ─────────────────────────────────────── -->
+        <div class="wb-panel" x-show="activeTab === 'alignment'" role="tabpanel">
+
+            <p style="font:var(--type-caption);color:var(--fg-dim);margin-bottom:var(--sp-md);">
+                Bipartite arc diagram — source words (left) connected to their target equivalents (right).
+                Each color is one alignment group. Generated automatically after each translation.
+            </p>
+
+            <div class="wb-loading" x-show="batchAlignLoading">Computing word alignment…</div>
+            <div class="wb-error" x-show="!batchAlignLoading && batchAlignError" x-text="batchAlignError"></div>
+            <div class="wb-empty" x-show="!batchAlignLoading && !batchAlignError && !batchAlignment.length">
+                No alignment data — translate a sentence first.
+            </div>
+
+            <div class="alignment-svg-wrap" x-show="!batchAlignLoading && !batchAlignError && batchAlignment.length">
+                <div x-html="alignmentSVG"></div>
+            </div>
+
+            <div x-show="!batchAlignLoading && !batchAlignError && batchAlignment.length" style="margin-top:var(--sp-lg);">
+                <div class="wb-section-label">Alignment table</div>
+                <table class="wb-table">
+                    <thead><tr><th>Target word</th><th>Source word(s)</th></tr></thead>
+                    <tbody>
+                        <template x-for="a in batchAlignment" :key="a.target_word">
+                            <tr>
+                                <td class="thaana-cell" x-text="a.target_word"></td>
+                                <td x-text="(a.source_words || []).join(', ')"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+        </div><!-- /alignment -->
+
+        <!-- ── NEURAL NET TAB ────────────────────────────────────── -->
+        <div class="wb-panel" x-show="activeTab === 'neural-net'" role="tabpanel">
+
+            <p style="font:var(--type-caption);color:var(--fg-dim);margin-bottom:var(--sp-md);">
+                Force-directed alignment graph — English source (blue) and Dhivehi target (teal) connected by bezier curves where the model aligned them. Named entities (yellow) and politeness registers (purple) appear in the middle lane. Hover any node to trace its connections; drag to rearrange.
+            </p>
+
+            <div class="wb-loading" x-show="loading || batchAlignLoading">Building alignment network…</div>
+            <div class="wb-empty" x-show="!loading && !batchAlignLoading && !tokens.length">
+                No active translation to map — translate a sentence first.
+            </div>
+            <div class="wb-empty" x-show="!loading && !batchAlignLoading && tokens.length && !batchAlignment.length" style="font-style:italic;"
+                 x-text="batchAlignError ? 'Alignment unavailable: ' + batchAlignError : 'Alignment data not yet loaded — translate a sentence first.'">
+            </div>
+
+            <div class="canvas-container" x-show="!loading && !batchAlignLoading && tokens.length"
+                 style="display:block;width:100%;overflow:hidden;">
+                <canvas id="neuralNetCanvas" style="display:block;max-width:100%;"></canvas>
+            </div>
+
+        </div><!-- /neural-net -->
+
+        <!-- ── GLOSSARY TAB ───────────────────────────────────────── -->
+        <div class="wb-panel" x-show="activeTab === 'glossary'" role="tabpanel">
+
+            <div class="glossary-search-row">
+                <input
+                    type="text"
+                    class="glossary-search-input"
+                    x-model="glossarySearch"
+                    @input.debounce.300ms="searchGlossary()"
+                    placeholder="Search English or Dhivehi terms…"
+                />
+                <span style="font: var(--type-caption); color: var(--fg-muted);"
+                      x-show="glossaryTotal"
+                      x-text="glossaryTotal.toLocaleString() + ' terms in glossary'"></span>
+            </div>
+
+            <div class="wb-loading" x-show="glossaryLoading">Loading…</div>
+
+            <table class="wb-table" x-show="!glossaryLoading && glossaryResults.length">
+                <thead>
+                    <tr>
+                        <th>English</th>
+                        <th>Dhivehi</th>
+                        <th>Domain</th>
+                        <th>Freq</th>
+                        <th>Conf</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="gt in glossaryResults" :key="gt.id">
+                        <tr>
+                            <td x-text="gt.en_term"></td>
+                            <td class="thaana-cell" x-text="gt.dv_term"></td>
+                            <td>
+                                <span x-show="gt.domain" class="badge-domain" x-text="gt.domain"></span>
+                                <span x-show="!gt.domain" style="color:var(--fg-muted);">—</span>
+                            </td>
+                            <td x-text="gt.freq ?? '—'"></td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:6px;min-width:80px;">
+                                    <span x-text="fmtConf(gt.confidence)" style="font-size:11px;min-width:32px;"></span>
+                                    <div class="conf-bar" style="flex:1;">
+                                        <div class="conf-bar-fill" :style="'width:'+Math.round((gt.confidence||0)*100)+'%'"></div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <div class="wb-empty" x-show="!glossaryLoading && !glossaryResults.length">
+                No matching glossary terms.
+            </div>
+
+        </div><!-- /glossary -->
+
+        <!-- ── BENCHMARKS TAB ───────────────────────────────────────── -->
+        <div class="wb-panel" x-show="activeTab === 'benchmarks'" role="tabpanel">
+
+            <div class="wb-loading" x-show="benchmarksLoading">Loading benchmark data…</div>
+
+            <div class="wb-empty" x-show="!benchmarksLoading && !benchmarks">
+                Click this tab to load DhivehiMT-Bench reference results.
+            </div>
+
+            <div x-show="benchmarks && !benchmarksLoading">
+
+                <!-- Summary widget -->
+                <div class="wb-section" x-show="benchmarks?.summary?.moonlight_chrf">
+                    <div class="wb-section-label">
+                        DhivehiMT-Bench — Government EN→DV ·
+                        <span x-text="benchmarks.summary?.n_items || 50"></span> items ·
+                        <span style="opacity:.7;" x-text="benchmarks.summary?.dataset || ''"></span>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:var(--sp-xl);align-items:center;padding:var(--sp-md) var(--sp-lg);background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border);margin-bottom:var(--sp-md);">
+                        <div style="text-align:center;">
+                            <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Best Frontier (raw)</div>
+                            <div style="font-size:40px;font-weight:700;color:var(--fg-dim);line-height:1;" x-text="benchmarks.summary.best_frontier_chrf"></div>
+                            <div style="font-size:10px;color:var(--fg-muted);margin-top:2px;">chrF</div>
+                        </div>
+                        <div style="font-size:24px;color:var(--border);align-self:center;">→</div>
+                        <div style="text-align:center;">
+                            <div style="font-size:10px;color:var(--primary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">moonlight pipeline</div>
+                            <div style="font-size:40px;font-weight:700;color:var(--primary);line-height:1;" x-text="benchmarks.summary.moonlight_chrf"></div>
+                            <div style="font-size:10px;color:var(--primary);margin-top:2px;">chrF</div>
+                        </div>
+                        <div style="text-align:center;border-left:1px solid var(--border);padding-left:var(--sp-xl);">
+                            <div style="font-size:10px;color:var(--good);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">improvement</div>
+                            <div style="font-size:34px;font-weight:700;color:var(--good);line-height:1;" x-text="'+' + benchmarks.summary.improvement"></div>
+                            <div style="font-size:10px;color:var(--good);margin-top:2px;">chrF points</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main set results table -->
+                <div class="wb-section" x-show="benchmarkMainRows.length">
+                    <div class="wb-section-label">Main set results — all systems</div>
+                    <table class="wb-table">
+                        <thead>
+                            <tr>
+                                <th>System</th>
+                                <th>Run</th>
+                                <th>chrF ↑</th>
+                                <th>BLEU ↑</th>
+                                <th>Fluency ↑</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="row in benchmarkMainRows" :key="row.runId + '_' + row.sys">
+                                <tr :style="row.isMoonlight ? 'background:rgba(124,158,248,0.05)' : ''">
+                                    <td :style="row.isMoonlight ? 'font-weight:600;color:var(--primary)' : ''"
+                                        x-text="row.sys"></td>
+                                    <td style="color:var(--fg-muted);font-size:11px;" x-text="row.run_label"></td>
+                                    <td :style="row.isMoonlight ? 'font-weight:700;color:var(--primary)' : ''"
+                                        x-text="row.chrf"></td>
+                                    <td x-text="row.bleu"></td>
+                                    <td x-text="row.fluency"></td>
+                                    <td style="color:var(--fg-muted);font-size:11px;" x-text="row.cost"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Challenge set breakdown -->
+                <div class="wb-section" x-show="benchmarkChallengeRows.length">
+                    <div class="wb-section-label">
+                        Challenge set accuracy — moonlight pipeline
+                        <span x-show="benchmarkChallengeOverall" style="font-weight:normal;opacity:.7;">
+                            · <span x-text="benchmarkChallengeOverall?.n_pairs || ''"></span> pairs
+                            · <span x-text="Math.round((benchmarkChallengeOverall?.overall_accuracy || 0) * 100)"></span>% overall
+                            (<span x-text="benchmarkChallengeOverall?.n_verified || ''"></span> human-verified:
+                            <span x-text="Math.round((benchmarkChallengeOverall?.verified_accuracy || 0) * 100)"></span>%)
+                        </span>
+                    </div>
+                    <div style="display:grid;gap:6px;max-width:600px;">
+                        <template x-for="row in benchmarkChallengeRows" :key="row.label">
+                            <div style="display:flex;align-items:center;gap:var(--sp-md);">
+                                <span style="min-width:210px;font-size:12px;color:var(--fg-dim);text-transform:capitalize;"
+                                      x-text="row.label"></span>
+                                <div style="flex:1;height:7px;background:rgba(107,130,154,0.18);border-radius:4px;overflow:hidden;">
+                                    <div :style="'width:' + row.pct + '%;height:100%;border-radius:4px;background:' + row.color"></div>
+                                </div>
+                                <span style="min-width:38px;text-align:right;font-size:12px;font-weight:700;"
+                                      :style="'color:' + row.color"
+                                      x-text="row.pct + '%'"></span>
+                            </div>
+                        </template>
+                    </div>
+                    <p style="font:var(--type-caption);color:var(--fg-muted);margin-top:var(--sp-md);">
+                        Accuracy = fraction of challenge pairs where moonlight preserves the
+                        category-specific feature (register, entity, numeral, gender, etc.).
+                    </p>
+                </div>
+
+            </div>
+
+        </div><!-- /benchmarks -->
+
+    </div><!-- /.wb-analysis -->
+
+</div><!-- /.wb-wrap -->
+</main>
+
+<footer class="site">
+    moonlight — EN↔DV translation engine
+    · <a href="/api/docs">API docs</a>
+</footer>
+
+</body>
+</html>

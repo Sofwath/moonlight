@@ -31,6 +31,16 @@ docs/EVAL_RESULTS.md
 .venv/
 venv/
 
+# Generated benchmark results and eval runs (may contain model outputs or cost data)
+results/
+
+# Demo video output
+demo/
+
+# Coverage artefacts
+.coverage
+htmlcov/
+
 # Generated docs (PDF is binary; regenerate with pandoc)
 docs/*.pdf
 

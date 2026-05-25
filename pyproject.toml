@@ -29,6 +29,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+web = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "slowapi>=0.1.9",
+    "python-multipart>=0.0.9",
+]
 eval = [
     "sacrebleu>=2.4",
     "tabulate>=0.9",
@@ -49,6 +55,7 @@ scrape = [
 dev = [
     "moonlight-mt[eval,embeddings]",
     "pytest>=7",
+    "pytest-cov>=4.0",
 ]
 
 [project.scripts]
@@ -61,6 +68,18 @@ include = ["moonlight*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+addopts = "--cov=moonlight --cov-report=term-missing --cov-fail-under=40"
+# Current baseline: 42% (core logic ~58-86%, web API endpoints 0% — need httpx integration tests)
+
+[tool.coverage.run]
+omit = ["moonlight/web/static/*", "scripts/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
 
 [tool.ruff]
 line-length = 88

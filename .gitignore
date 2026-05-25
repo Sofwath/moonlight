@@ -34,8 +34,9 @@ venv/
 # Generated benchmark results and eval runs (may contain model outputs or cost data)
 results/
 
-# Demo video output
-demo/
+# Demo video output (raw Playwright recordings excluded; keep only the final MP4)
+demo/*
+!demo/moonlight_workbench_demo.mp4
 
 # Coverage artefacts
 .coverage

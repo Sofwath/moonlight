@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """POST /api/spellcheck — Dhivehi spell checker via Haiku."""
 import json
+import logging
 import os
 import re
 
@@ -8,6 +9,8 @@ from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..limits import limiter
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -24,7 +27,7 @@ _SYSTEM = (
 
 class SpellcheckRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=4000)
-    lang: str = Field(default="DV")
+    lang: str = Field(default="DV", pattern=r"^(EN|DV)$")
 
 
 SpellcheckRequest.model_rebuild()
@@ -57,7 +60,8 @@ def spellcheck(request: Request, req: SpellcheckRequest = Body(...)) -> dict:
         m = re.search(r'\{.*\}', text, re.DOTALL)
         try:
             data = json.loads(m.group()) if m else {}
-        except Exception:
+        except Exception as e:
+            logger.warning("spellcheck JSON parse failed: %s", e)
             data = {}
 
     return {"issues": data.get("issues", []), "lang": req.lang}

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """POST /api/alternatives — word-level translation alternatives via Haiku."""
 import json
+import logging
 import os
 import re
 
@@ -8,6 +9,8 @@ from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..limits import limiter
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -28,7 +31,7 @@ class AltRequest(BaseModel):
     word: str = Field(..., min_length=1, max_length=200)
     translation: str = Field(..., min_length=1, max_length=2000)
     source: str = Field(default="", max_length=2000)
-    target_lang: str = Field(default="DV")
+    target_lang: str = Field(default="DV", pattern=r"^(EN|DV)$")
 
 
 AltRequest.model_rebuild()
@@ -69,7 +72,8 @@ def alternatives(request: Request, req: AltRequest = Body(...)) -> dict:
         m = re.search(r'\{.*\}', text, re.DOTALL)
         try:
             data = json.loads(m.group()) if m else {}
-        except Exception:
+        except Exception as e:
+            logger.warning("alternatives JSON parse failed: %s", e)
             data = {}
 
     return {"alternatives": data.get("alternatives", []), "word": req.word}

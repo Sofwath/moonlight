@@ -27,8 +27,9 @@ log = logging.getLogger(__name__)
 # Thaana script range U+0780–U+07BF
 _THAANA_RE = re.compile(r"[ހ-޿]")
 
-_GEONAMES_MAIN_URL = "http://download.geonames.org/export/dump/MV.zip"
-_GEONAMES_ALT_URL  = "http://download.geonames.org/export/dump/alternatenames/MV.zip"
+_GEONAMES_MAIN_URL = "https://download.geonames.org/export/dump/MV.zip"
+_GEONAMES_ALT_URL  = "https://download.geonames.org/export/dump/alternatenames/MV.zip"
+_GEONAMES_ALLOWED_HOST = "download.geonames.org"
 
 PLACE_NAMES_SCHEMA = """
 CREATE TABLE IF NOT EXISTS place_names (
@@ -178,8 +179,12 @@ def _parse_altnames(data: bytes) -> dict[int, dict]:
 
 def _download_zip(url: str, *, timeout: int = 30) -> bytes:
     """Download a GeoNames zip URL; return the first contained file's bytes."""
+    import urllib.parse
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != "https" or parsed.netloc != _GEONAMES_ALLOWED_HOST:
+        raise ValueError(f"refusing download from untrusted URL: {url!r}")
     log.info("downloading %s", url)
-    req = urllib.request.Request(url, headers={"User-Agent": "kahzaabu-place-names/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "moonlight-place-names/1.0"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         raw = resp.read()
     with zipfile.ZipFile(io.BytesIO(raw)) as zf:

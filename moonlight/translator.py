@@ -103,6 +103,10 @@ _K_FEW_SHORT: int = 2
 _K_FEW_MED: int = 3
 _K_FEW_LONG: int = 5          # > _K_FEW_MED_LIMIT, or any po_style input
 
+# Max characters of each article body included as a few-shot exemplar context.
+# Limits prompt size while keeping enough of the article to show register/style.
+_EXEMPLAR_BODY_CHARS: int = 6000
+
 
 # ── Language detection ─────────────────────────────────────────────────────────
 #
@@ -1573,8 +1577,8 @@ def _extract_pairs_from_article(
     """
     import time as _time
     user = (
-        f"EN BODY:\n{en_body[:6000]}\n\n"
-        f"DV BODY:\n{dv_body[:6000]}\n\n"
+        f"EN BODY:\n{en_body[:_EXEMPLAR_BODY_CHARS]}\n\n"
+        f"DV BODY:\n{dv_body[:_EXEMPLAR_BODY_CHARS]}\n\n"
         f"Extract paired terms as JSON per the schema."
     )
     last_err: Optional[str] = None

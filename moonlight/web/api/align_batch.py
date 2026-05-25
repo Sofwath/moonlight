@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """POST /api/align-batch — word alignment via Haiku, with SQLite cache."""
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -12,6 +13,8 @@ from pydantic import BaseModel, Field
 
 from ..db_dep import get_db
 from ..limits import limiter
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -29,8 +32,8 @@ _CACHE_TTL_HOURS = 24.0
 class AlignBatchRequest(BaseModel):
     source: str = Field(..., min_length=1, max_length=2000)
     translation: str = Field(..., min_length=1, max_length=2000)
-    source_lang: str = Field(default="EN")
-    target_lang: str = Field(default="DV")
+    source_lang: str = Field(default="EN", pattern=r"^(EN|DV)$")
+    target_lang: str = Field(default="DV", pattern=r"^(EN|DV)$")
 
 
 AlignBatchRequest.model_rebuild()
@@ -56,7 +59,8 @@ def _cache_get(
         return None
     try:
         return json.loads(row[0])
-    except Exception:
+    except Exception as e:
+        logger.warning("alignment cache decode failed: %s", e)
         return None
 
 
@@ -80,8 +84,8 @@ def _cache_put(
             ),
         )
         conn.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("alignment cache write failed: %s", e)
 
 
 @router.post("/align-batch")

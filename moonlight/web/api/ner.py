@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """POST /api/ner — lightweight Named Entity Recognition via Haiku."""
 import json
+import logging
 import os
 import re
 
@@ -8,6 +9,8 @@ from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..limits import limiter
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -22,7 +25,7 @@ _SYSTEM = (
 
 class NERRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=4000)
-    lang: str = Field(default="DV")
+    lang: str = Field(default="DV", pattern=r"^(EN|DV)$")
 
 
 NERRequest.model_rebuild()
@@ -55,7 +58,8 @@ def ner(request: Request, req: NERRequest = Body(...)) -> dict:
         m = re.search(r'\{.*\}', text, re.DOTALL)
         try:
             data = json.loads(m.group()) if m else {}
-        except Exception:
+        except Exception as e:
+            logger.warning("ner JSON parse failed: %s", e)
             data = {}
 
     return {"entities": data.get("entities", []), "lang": req.lang}

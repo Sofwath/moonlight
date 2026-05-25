@@ -44,7 +44,7 @@ from __future__ import annotations
 import logging
 import re
 import sqlite3
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -318,7 +318,7 @@ def _get_embedder(model_name: str = _MULTILINGUAL_MODEL):
         return None
 
 
-def _encode(texts: list[str], model_name: str = _MULTILINGUAL_MODEL):
+def _encode(texts: list[str], model_name: str = _MULTILINGUAL_MODEL) -> "Optional[Any]":
     """Embed a list of texts. Returns numpy array (n, dim) or None
     if the embedder is unavailable. CPU-bound; batches the call."""
     model = _get_embedder(model_name)

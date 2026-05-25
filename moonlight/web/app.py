@@ -23,7 +23,8 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -51,6 +52,12 @@ STATIC_DIR = PKG_DIR / "static"
 app = FastAPI(title="moonlight", docs_url="/api/docs", redoc_url=None)
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:8000").split(","),
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 
 @app.exception_handler(RateLimitExceeded)
@@ -92,6 +99,11 @@ def page_root():
 @app.get("/workbench", include_in_schema=False)
 def page_workbench():
     return FileResponse(STATIC_DIR / "workbench.html")
+
+
+@app.get("/health", include_in_schema=False)
+def health():
+    return JSONResponse({"status": "ok"})
 
 
 @app.get("/robots.txt", include_in_schema=False)

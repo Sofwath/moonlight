@@ -1,0 +1,489 @@
+{
+  "benchmark": "DhivehiMT-Bench",
+  "license": "CC BY 4.0",
+  "language_pair": "eng_Latn–div_Thaa",
+  "domain": "government_institutional",
+  "source": "presidency.gov.mv",
+  "n_segments": 53,
+  "generated_date": "2026-05-24",
+  "format": "FLORES+/OLDI devtest",
+  "segments": [
+    {
+      "line": 1,
+      "segment_id": "government_en_dv_0080",
+      "article_id": 28278,
+      "sentence_idx": 6,
+      "published_date": "2023-05-08",
+      "category": "press_release",
+      "reference_url": "2023-161"
+    },
+    {
+      "line": 2,
+      "segment_id": "government_en_dv_0099",
+      "article_id": 28982,
+      "sentence_idx": 5,
+      "published_date": "2023-11-05",
+      "category": "press_release",
+      "reference_url": "2023-453"
+    },
+    {
+      "line": 3,
+      "segment_id": "government_en_dv_0051",
+      "article_id": 31623,
+      "sentence_idx": 4,
+      "published_date": "2024-09-18",
+      "category": "press_release",
+      "reference_url": "2024-805"
+    },
+    {
+      "line": 4,
+      "segment_id": "government_en_dv_0052",
+      "article_id": 31771,
+      "sentence_idx": 1,
+      "published_date": "2024-10-01",
+      "category": "press_release",
+      "reference_url": "2024-864"
+    },
+    {
+      "line": 5,
+      "segment_id": "government_en_dv_0053",
+      "article_id": 31818,
+      "sentence_idx": 0,
+      "published_date": "2024-10-07",
+      "category": "press_release",
+      "reference_url": "2024-886"
+    },
+    {
+      "line": 6,
+      "segment_id": "government_en_dv_0054",
+      "article_id": 31897,
+      "sentence_idx": 1,
+      "published_date": "2024-10-15",
+      "category": "press_release",
+      "reference_url": "2024-916"
+    },
+    {
+      "line": 7,
+      "segment_id": "government_en_dv_0055",
+      "article_id": 31944,
+      "sentence_idx": 7,
+      "published_date": "2024-10-24",
+      "category": "press_release",
+      "reference_url": "2024-934"
+    },
+    {
+      "line": 8,
+      "segment_id": "government_en_dv_0056",
+      "article_id": 31987,
+      "sentence_idx": 2,
+      "published_date": "2024-10-31",
+      "category": "press_release",
+      "reference_url": "2024-954"
+    },
+    {
+      "line": 9,
+      "segment_id": "government_en_dv_0057",
+      "article_id": 32126,
+      "sentence_idx": 0,
+      "published_date": "2024-11-12",
+      "category": "press_release",
+      "reference_url": "2024-1018"
+    },
+    {
+      "line": 10,
+      "segment_id": "government_en_dv_0058",
+      "article_id": 32184,
+      "sentence_idx": 2,
+      "published_date": "2024-11-16",
+      "category": "press_release",
+      "reference_url": "2024-1038"
+    },
+    {
+      "line": 11,
+      "segment_id": "government_en_dv_0059",
+      "article_id": 32225,
+      "sentence_idx": 3,
+      "published_date": "2024-11-20",
+      "category": "press_release",
+      "reference_url": "2024-1057"
+    },
+    {
+      "line": 12,
+      "segment_id": "government_en_dv_0060",
+      "article_id": 32905,
+      "sentence_idx": 0,
+      "published_date": "2025-01-28",
+      "category": "press_release",
+      "reference_url": "2025-106"
+    },
+    {
+      "line": 13,
+      "segment_id": "government_en_dv_0061",
+      "article_id": 32976,
+      "sentence_idx": 5,
+      "published_date": "2025-02-01",
+      "category": "press_release",
+      "reference_url": "2025-136"
+    },
+    {
+      "line": 14,
+      "segment_id": "government_en_dv_0062",
+      "article_id": 33148,
+      "sentence_idx": 4,
+      "published_date": "2025-02-19",
+      "category": "press_release",
+      "reference_url": "2025-196"
+    },
+    {
+      "line": 15,
+      "segment_id": "government_en_dv_0063",
+      "article_id": 33144,
+      "sentence_idx": 10,
+      "published_date": "2025-02-20",
+      "category": "press_release",
+      "reference_url": "2025-198"
+    },
+    {
+      "line": 16,
+      "segment_id": "government_en_dv_0064",
+      "article_id": 33144,
+      "sentence_idx": 14,
+      "published_date": "2025-02-20",
+      "category": "press_release",
+      "reference_url": "2025-198"
+    },
+    {
+      "line": 17,
+      "segment_id": "government_en_dv_0065",
+      "article_id": 33189,
+      "sentence_idx": 5,
+      "published_date": "2025-02-24",
+      "category": "press_release",
+      "reference_url": "2025-217"
+    },
+    {
+      "line": 18,
+      "segment_id": "government_en_dv_0066",
+      "article_id": 33362,
+      "sentence_idx": 6,
+      "published_date": "2025-03-26",
+      "category": "press_release",
+      "reference_url": "2025-281"
+    },
+    {
+      "line": 19,
+      "segment_id": "government_en_dv_0067",
+      "article_id": 33599,
+      "sentence_idx": 9,
+      "published_date": "2025-04-29",
+      "category": "press_release",
+      "reference_url": "2025-383"
+    },
+    {
+      "line": 20,
+      "segment_id": "government_en_dv_0068",
+      "article_id": 33727,
+      "sentence_idx": 15,
+      "published_date": "2025-05-15",
+      "category": "press_release",
+      "reference_url": "2025-429"
+    },
+    {
+      "line": 21,
+      "segment_id": "government_en_dv_0069",
+      "article_id": 33730,
+      "sentence_idx": 1,
+      "published_date": "2025-05-15",
+      "category": "press_release",
+      "reference_url": "2025-432"
+    },
+    {
+      "line": 22,
+      "segment_id": "government_en_dv_0070",
+      "article_id": 33780,
+      "sentence_idx": 12,
+      "published_date": "2025-05-21",
+      "category": "press_release",
+      "reference_url": "2025-454"
+    },
+    {
+      "line": 23,
+      "segment_id": "government_en_dv_0071",
+      "article_id": 33812,
+      "sentence_idx": 2,
+      "published_date": "2025-05-26",
+      "category": "press_release",
+      "reference_url": "2025-466"
+    },
+    {
+      "line": 24,
+      "segment_id": "government_en_dv_0072",
+      "article_id": 33860,
+      "sentence_idx": 7,
+      "published_date": "2025-05-30",
+      "category": "press_release",
+      "reference_url": "2025-486"
+    },
+    {
+      "line": 25,
+      "segment_id": "government_en_dv_0073",
+      "article_id": 33882,
+      "sentence_idx": 1,
+      "published_date": "2025-05-31",
+      "category": "press_release",
+      "reference_url": "2025-497"
+    },
+    {
+      "line": 26,
+      "segment_id": "government_en_dv_0074",
+      "article_id": 33919,
+      "sentence_idx": 5,
+      "published_date": "2025-06-07",
+      "category": "press_release",
+      "reference_url": "2025-513"
+    },
+    {
+      "line": 27,
+      "segment_id": "government_en_dv_0075",
+      "article_id": 34034,
+      "sentence_idx": 0,
+      "published_date": "2025-06-23",
+      "category": "press_release",
+      "reference_url": "2025-555"
+    },
+    {
+      "line": 28,
+      "segment_id": "government_en_dv_0076",
+      "article_id": 34197,
+      "sentence_idx": 0,
+      "published_date": "2025-07-06",
+      "category": "press_release",
+      "reference_url": "2025-608"
+    },
+    {
+      "line": 29,
+      "segment_id": "government_en_dv_0077",
+      "article_id": 34340,
+      "sentence_idx": 6,
+      "published_date": "2025-07-22",
+      "category": "press_release",
+      "reference_url": "2025-659"
+    },
+    {
+      "line": 30,
+      "segment_id": "government_en_dv_0078",
+      "article_id": 34696,
+      "sentence_idx": 5,
+      "published_date": "2025-08-24",
+      "category": "press_release",
+      "reference_url": "2025-804"
+    },
+    {
+      "line": 31,
+      "segment_id": "government_en_dv_0079",
+      "article_id": 34717,
+      "sentence_idx": 9,
+      "published_date": "2025-08-25",
+      "category": "press_release",
+      "reference_url": "2025-815"
+    },
+    {
+      "line": 32,
+      "segment_id": "government_dv_en_0080",
+      "article_id": 34795,
+      "sentence_idx": 0,
+      "published_date": "2025-08-30",
+      "category": "press_release",
+      "reference_url": "2025-844"
+    },
+    {
+      "line": 33,
+      "segment_id": "government_en_dv_0081",
+      "article_id": 35003,
+      "sentence_idx": 1,
+      "published_date": "2025-09-22",
+      "category": "press_release",
+      "reference_url": "2025-930"
+    },
+    {
+      "line": 34,
+      "segment_id": "government_en_dv_0100",
+      "article_id": 35096,
+      "sentence_idx": 0,
+      "published_date": "2025-09-25",
+      "category": "press_release",
+      "reference_url": "2025-964"
+    },
+    {
+      "line": 35,
+      "segment_id": "government_en_dv_0082",
+      "article_id": 35239,
+      "sentence_idx": 6,
+      "published_date": "2025-10-07",
+      "category": "press_release",
+      "reference_url": "2025-1024"
+    },
+    {
+      "line": 36,
+      "segment_id": "government_en_dv_0083",
+      "article_id": 35409,
+      "sentence_idx": 6,
+      "published_date": "2025-10-20",
+      "category": "press_release",
+      "reference_url": "2025-1089"
+    },
+    {
+      "line": 37,
+      "segment_id": "government_en_dv_0084",
+      "article_id": 35489,
+      "sentence_idx": 1,
+      "published_date": "2025-10-27",
+      "category": "press_release",
+      "reference_url": "2025-1124"
+    },
+    {
+      "line": 38,
+      "segment_id": "government_en_dv_0085",
+      "article_id": 35489,
+      "sentence_idx": 12,
+      "published_date": "2025-10-27",
+      "category": "press_release",
+      "reference_url": "2025-1124"
+    },
+    {
+      "line": 39,
+      "segment_id": "government_en_dv_0086",
+      "article_id": 35520,
+      "sentence_idx": 17,
+      "published_date": "2025-10-28",
+      "category": "press_release",
+      "reference_url": "2025-1138"
+    },
+    {
+      "line": 40,
+      "segment_id": "government_en_dv_0087",
+      "article_id": 35562,
+      "sentence_idx": 7,
+      "published_date": "2025-11-03",
+      "category": "press_release",
+      "reference_url": "2025-1153"
+    },
+    {
+      "line": 41,
+      "segment_id": "government_en_dv_0088",
+      "article_id": 35586,
+      "sentence_idx": 10,
+      "published_date": "2025-11-05",
+      "category": "press_release",
+      "reference_url": "2025-1164"
+    },
+    {
+      "line": 42,
+      "segment_id": "government_en_dv_0089",
+      "article_id": 35597,
+      "sentence_idx": 6,
+      "published_date": "2025-11-05",
+      "category": "press_release",
+      "reference_url": "2025-1167"
+    },
+    {
+      "line": 43,
+      "segment_id": "government_en_dv_0090",
+      "article_id": 35640,
+      "sentence_idx": 13,
+      "published_date": "2025-11-11",
+      "category": "press_release",
+      "reference_url": "2025-1187"
+    },
+    {
+      "line": 44,
+      "segment_id": "government_en_dv_0091",
+      "article_id": 35706,
+      "sentence_idx": 0,
+      "published_date": "2025-11-17",
+      "category": "press_release",
+      "reference_url": "2025-1219"
+    },
+    {
+      "line": 45,
+      "segment_id": "government_en_dv_0092",
+      "article_id": 35710,
+      "sentence_idx": 12,
+      "published_date": "2025-11-17",
+      "category": "press_release",
+      "reference_url": "2025-1221"
+    },
+    {
+      "line": 46,
+      "segment_id": "government_en_dv_0093",
+      "article_id": 35833,
+      "sentence_idx": 2,
+      "published_date": "2025-12-04",
+      "category": "press_release",
+      "reference_url": "2025-1273"
+    },
+    {
+      "line": 47,
+      "segment_id": "government_en_dv_0094",
+      "article_id": 36142,
+      "sentence_idx": 2,
+      "published_date": "2026-02-05",
+      "category": "press_release",
+      "reference_url": "2026-058"
+    },
+    {
+      "line": 48,
+      "segment_id": "government_en_dv_0095",
+      "article_id": 36158,
+      "sentence_idx": 7,
+      "published_date": "2026-02-05",
+      "category": "press_release",
+      "reference_url": "2026-070"
+    },
+    {
+      "line": 49,
+      "segment_id": "government_en_dv_0096",
+      "article_id": 36288,
+      "sentence_idx": 3,
+      "published_date": "2026-02-26",
+      "category": "press_release",
+      "reference_url": "2026-126"
+    },
+    {
+      "line": 50,
+      "segment_id": "government_en_dv_0097",
+      "article_id": 36302,
+      "sentence_idx": 0,
+      "published_date": "2026-03-02",
+      "category": "press_release",
+      "reference_url": "2026-132"
+    },
+    {
+      "line": 51,
+      "segment_id": "government_en_dv_0098",
+      "article_id": 36362,
+      "sentence_idx": 0,
+      "published_date": "2026-03-22",
+      "category": "press_release",
+      "reference_url": "2026-158"
+    },
+    {
+      "line": 52,
+      "segment_id": "government_dv_en_0099",
+      "article_id": 36371,
+      "sentence_idx": 13,
+      "published_date": "2026-03-23",
+      "category": "press_release",
+      "reference_url": "2026-161"
+    },
+    {
+      "line": 53,
+      "segment_id": "government_dv_en_0100",
+      "article_id": 36612,
+      "sentence_idx": 15,
+      "published_date": "2026-05-06",
+      "category": "press_release",
+      "reference_url": "2026-259"
+    }
+  ]
+}

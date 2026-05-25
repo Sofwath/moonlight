@@ -17,6 +17,7 @@ Moonlight is a standalone English ↔ Dhivehi translation engine that uses retri
 - [Problem Statement](#problem-statement)
 - [Architecture Overview](#architecture-overview)
 - [Quick Start](#quick-start)
+- [Translation Workbench](#run-the-web-workbench)
 - [Dataset](#dataset)
 - [Dhivehi Language Notes](#dhivehi-language-notes)
 - [Design Philosophy](#design-philosophy)
@@ -204,6 +205,44 @@ moonlight translate "..." --json-output
 moonlight models
 ```
 
+### Run the web workbench
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+uvicorn moonlight.web.app:app --reload
+# → open http://localhost:8000/workbench
+```
+
+The workbench is a browser-based translation analysis UI with five tabs:
+
+| Tab | What it shows |
+|---|---|
+| **Provenance** | The 3 few-shot exemplar articles and phrase-context snippets used to produce this translation |
+| **Word Detail** | Click any output token → glossary entry + 5 concordance snippets from the corpus |
+| **Phrases** | Noun-phrase contexts retrieved for specific terms in the input |
+| **Quality** | Entity check results and back-translation comparison |
+| **Glossary** | Searchable EN↔DV terminology browser (3,000+ terms) |
+
+Output tokens are clickable. Thaana verbs are badged by register (honorific, formal, perfective). Word alignment arcs connect source and target tokens.
+
+The workbench exposes a REST API alongside the UI:
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/translate` | POST | Full translation with provenance |
+| `/api/concordance` | GET | FTS5 corpus search for a query term |
+| `/api/glossary` | GET | Browse/search the terminology glossary |
+| `/api/align-batch` | POST | Word alignment (cached, Haiku) |
+| `/api/alternatives` | POST | Alternative translations for a selected word |
+| `/api/ner` | POST | Named entity recognition |
+| `/api/spellcheck` | POST | Dhivehi spell check |
+| `/api/fluency` | POST | DV fluency score via GPT-2 perplexity |
+| `/api/translate/history` | GET | Recent translation log |
+| `/api/benchmarks` | GET | Latest benchmark results |
+| `/health` | GET | Server health check |
+
+API docs: `http://localhost:8000/api/docs`
+
 ### Run the evaluation suite
 
 ```bash
@@ -354,6 +393,23 @@ Trying to do both in one prompt produces a compromise that is mediocre at both. 
 ---
 
 ## Evaluation
+
+### DhivehiMT-Bench
+
+DhivehiMT-Bench is a 53-segment held-out benchmark in FLORES+/OLDI format, drawn from Presidency Office press releases across all article categories and date ranges. It is the primary evaluation set for this project.
+
+```bash
+# Run the full benchmark harness
+python scripts/run_benchmark.py --model sonnet --n-candidates 3
+# → results/benchmark_{model}_{timestamp}.json
+
+# Human-readable report
+python scripts/report_benchmark.py results/benchmark_*.json
+```
+
+The benchmark uses an LLM judge panel with swap-test methodology (two independent judgements per segment, calibrated against human reference) in addition to automated chrF/BLEU/Numeric F1 scoring.
+
+The FLORES+ format submission is in [`data/flores_submission/`](data/flores_submission/).
 
 ### Metrics
 

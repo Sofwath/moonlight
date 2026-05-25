@@ -12,6 +12,7 @@ This document describes the internal design of the Moonlight translation engine:
 - [Retrieval Pipeline](#retrieval-pipeline)
 - [Prompt Construction](#prompt-construction)
 - [Candidate Scoring](#candidate-scoring)
+- [Web Layer](#web-layer)
 - [Evaluation Methodology](#evaluation-methodology)
 
 ---
@@ -130,12 +131,28 @@ moonlight/
 ├── db.py                  ← SQLite connection management
 │        depends on: sqlite3 (stdlib)
 │
-└── corpus/
-     ├── scrape.py         ← Scrape presidency.gov.mv
-     ├── parse.py          ← Extract and clean article text
-     ├── align.py          ← Sentence-level alignment
-     ├── embed.py          ← Batch embedding generation
-     └── import_.py        ← Import from kahzaabu DB
+├── corpus/
+│    ├── scrape.py         ← Scrape presidency.gov.mv
+│    ├── parse.py          ← Extract and clean article text
+│    ├── align.py          ← Sentence-level alignment
+│    ├── embed.py          ← Batch embedding generation
+│    └── import_.py        ← Import from kahzaabu DB
+│
+└── web/
+     ├── app.py            ← FastAPI app: routes, CORS, rate-limit middleware
+     ├── db_dep.py         ← FastAPI dependency: per-request SQLite connection
+     ├── limits.py         ← slowapi limiter + daily spend cap constants
+     └── api/
+          ├── translate.py     ← POST /api/translate
+          ├── concordance.py   ← GET  /api/concordance
+          ├── glossary_api.py  ← GET  /api/glossary
+          ├── align_batch.py   ← POST /api/align-batch  (cached word alignment)
+          ├── alternatives.py  ← POST /api/alternatives
+          ├── ner.py           ← POST /api/ner
+          ├── spellcheck.py    ← POST /api/spellcheck
+          ├── fluency.py       ← POST /api/fluency
+          ├── history.py       ← GET  /api/translate/history
+          └── benchmarks.py    ← GET  /api/benchmarks
 ```
 
 Key principle: `score.py` and `detect.py` have no DB dependencies — they operate on strings only, which makes them trivially testable in isolation.
@@ -263,6 +280,22 @@ CREATE VIRTUAL TABLE sentence_pairs_fts USING fts5(
     content='sentence_pairs',
     content_rowid='id',
     tokenize='unicode61'
+);
+```
+
+### `alignment_cache`
+
+Caches word-alignment results from the LLM to avoid redundant API calls. Entries expire after 24 hours (enforced by the query in `align_batch.py`, not by a DB trigger).
+
+```sql
+CREATE TABLE alignment_cache (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_text  TEXT NOT NULL,
+    translation  TEXT NOT NULL,
+    source_lang  TEXT NOT NULL,
+    target_lang  TEXT NOT NULL,
+    alignments   TEXT NOT NULL,  -- JSON array
+    created_at   TEXT NOT NULL
 );
 ```
 
@@ -522,6 +555,47 @@ score = (
 ```
 
 The numeric_f1 weight dominates because numeric errors are the most consequential failures in practice. The best candidate by this score is returned. All candidates and their scores are available on `TranslationResult.candidates` for inspection.
+
+---
+
+## Web Layer
+
+The web layer is a thin FastAPI application that wraps the core translation engine. It adds no business logic — all translation logic lives in `moonlight/translator.py`.
+
+### Middleware stack (applied in order)
+
+1. **SlowAPIMiddleware** — rate limiting via `slowapi`. Limits are per-endpoint (e.g. `10/minute` for `/api/translate`, `30/minute` for `/api/align-batch`). A daily USD spend cap is enforced inside the `/api/translate` handler before calling the LLM.
+2. **CORSMiddleware** — allowed origins controlled by the `CORS_ORIGINS` environment variable (comma-separated). Defaults to `http://localhost:8000` for local development.
+3. **`_no_cache_html` middleware** — sets `Cache-Control: no-store` on HTML responses so the workbench always reflects the latest build.
+
+### Request lifecycle for POST /api/translate
+
+```
+HTTP request
+    │
+    ▼
+CORSMiddleware (preflight / header injection)
+    │
+    ▼
+SlowAPIMiddleware (rate check: 10/minute per IP)
+    │
+    ▼
+translate() handler
+    ├── check daily spend cap (translation_runs table)
+    ├── validate ablate set
+    ├── call moonlight.translator.translate()
+    ├── attach glossary_terms (SQL lookup on translation_glossary)
+    ├── enrich phrase_contexts with target-side snippets
+    └── return JSON response
+```
+
+### Static assets
+
+The workbench UI is served from `moonlight/web/static/`. Alpine.js is vendored at `static/js/alpine.min.js` — no build step, no npm. The JS app (`static/js/workbench.js`) is a single Alpine component that drives all tab state, token interaction, and API calls.
+
+### DB dependency injection
+
+FastAPI's `Depends(get_db)` pattern is used for SQLite connections. `get_db()` in `db_dep.py` opens a connection using the path from the `MOONLIGHT_DB` environment variable (default: `data/moonlight.db`) and closes it after the response completes. This keeps connection lifetime scoped to the request, which is correct for SQLite in a single-process server.
 
 ---
 

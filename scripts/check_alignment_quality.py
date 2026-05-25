@@ -70,6 +70,25 @@ def _has_arabic_letters(text: str) -> bool:
     )
 
 
+def _thaana_tokens(text: str) -> set[str]:
+    return set(re.findall(r"[ހ-޿]+", text))
+
+
+def _thaana_jaccard(hyp: str, ref: str) -> float:
+    """Jaccard overlap of Thaana word-tokens between two DV strings.
+
+    Low overlap (< 0.10) means the two strings share almost no vocabulary —
+    strong evidence they are from different sentences of the same article rather
+    than a translation pair.  Used as a benchmark misalignment detector.
+    """
+    h = _thaana_tokens(hyp)
+    r = _thaana_tokens(ref)
+    if not h and not r:
+        return 1.0
+    union = len(h | r)
+    return len(h & r) / union if union else 0.0
+
+
 def _extract_numbers(text: str) -> set[str]:
     return set(re.findall(r"\d+", text))
 
@@ -106,6 +125,23 @@ def check_pair(seg: dict) -> dict:
         signals["has_arabic_letters"] = _has_arabic_letters(ref)
         if signals["has_arabic_letters"]:
             flags.append("arabic_contamination")
+
+    # Thaana token Jaccard overlap between source translation (approximated via
+    # a reference-only check) and reference.  For EN→DV pairs: both source and
+    # reference are in different scripts, so we compare the DV reference against
+    # a naive machine-transliterated proxy — not available here.  Instead, flag
+    # when the *hypothesis* (if present) and *reference* share almost no Thaana
+    # vocabulary.  When only source+reference are available (pre-translation
+    # check), use the DV reference's own self-overlap as a proxy: a very short
+    # reference with zero content tokens is suspicious.
+    # For post-translation review: check_pair accepts an optional "hypothesis"
+    # key so the caller can pass the system output alongside the gold reference.
+    hyp = seg.get("hypothesis", "")
+    if hyp and tgt == "DV":
+        jac = _thaana_jaccard(hyp, ref)
+        signals["thaana_jaccard"] = round(jac, 3)
+        if jac < 0.10:
+            flags.append(f"low_thaana_jaccard:{jac:.3f}")
 
     # Shared numbers — any number in EN must appear in DV
     if seg.get("source_lang") == "EN" and tgt == "DV":

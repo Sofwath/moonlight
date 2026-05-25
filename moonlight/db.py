@@ -171,6 +171,21 @@ END;
 """
 
 
+ALIGNMENT_CACHE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS alignment_cache (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_text  TEXT NOT NULL,
+    translation  TEXT NOT NULL,
+    source_lang  TEXT NOT NULL DEFAULT 'EN',
+    target_lang  TEXT NOT NULL DEFAULT 'DV',
+    alignments   TEXT NOT NULL,   -- JSON array
+    created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_alignment_cache_lookup
+    ON alignment_cache(source_text, translation, created_at);
+"""
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     """Create all moonlight tables. Idempotent — safe to call repeatedly."""
     conn.executescript(ARTICLES_SCHEMA)
@@ -178,6 +193,7 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(TRANSLATION_RUNS_SCHEMA)
     conn.executescript(SENTENCE_PAIRS_SCHEMA)
     conn.executescript(PLACE_NAMES_SCHEMA)
+    conn.executescript(ALIGNMENT_CACHE_SCHEMA)
 
     # FTS5 requires a CREATE VIRTUAL TABLE statement; executescript handles it
     # but we check existence first to avoid re-running FTS5 tokenizer init.

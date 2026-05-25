@@ -175,7 +175,7 @@ For the Dhivehi benchmark with 2–5 systems under test, pairwise judgement with
 
 **Script sensitivity**: **Bafna et al. (2025)** studied Sinhala — the nearest well-studied analogue to Dhivehi in terms of script and typology — and found LLMs perform dramatically differently on native script vs. romanised input. Dhivehi is never romanised in standard writing, meaning models have minimal non-script exposure pathways.
 
-**Register system**: Dhivehi encodes three register levels in: (a) first-person pronoun choice (ތިމަންނ / formal vs. އަހަރެން / standard); (b) verb suffix paradigms with politeness morphology; (c) lexical choice between Arabic-derived classical vocabulary and colloquial vocabulary. This is the linguistically most distinctive property of Dhivehi for MT evaluation purposes and is entirely absent from existing benchmarks.
+**Register system**: Dhivehi encodes three register levels in: (a) first-person pronoun choice (formal variants such as އަޅުގަނޑު vs colloquial alternatives; exact pair labels require native-speaker verification); (b) verb suffix paradigms with politeness morphology; (c) lexical choice between Arabic-derived classical vocabulary and colloquial vocabulary. This is the linguistically most distinctive property of Dhivehi for MT evaluation purposes and is entirely absent from existing benchmarks.
 
 **Gender-neutral pronouns**: Dhivehi third-person pronouns are gender-neutral. English gendered third-person pronouns (he/she) translate ambiguously; any benchmark must include pronoun translation test cases.
 

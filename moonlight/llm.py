@@ -197,13 +197,13 @@ MODELS: Final[Mapping[str, ModelSpec]] = {
 
     # ── OpenAI ─────────────────────────────────────────────────────────────────
     "gpt-5.5": ModelSpec(
-        id="gpt-5.5",
+        id="gpt-5.5-2026-04-23",
         provider=_OAI, api_key_env="OPENAI_API_KEY", base_url=None,
         in_per_m=5.0, out_per_m=20.0, context_window=128_000,
         family="GPT-5 / OpenAI",
         max_tokens_param="max_completion_tokens",
         supports_temperature=False,
-        notes="GPT-5.5 standard; uses max_completion_tokens; temperature deprecated",
+        notes="GPT-5.5 standard; pinned for run_002 reproducibility",
     ),
     "gpt-5.5-pro": ModelSpec(
         id="gpt-5.5-pro",

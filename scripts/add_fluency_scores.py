@@ -54,7 +54,7 @@ def main() -> None:
 
     print()
 
-    # Recompute aggregate fluency means
+    # Recompute aggregate fluency — stored under fluency_diagnostic per §5.1
     agg = data.get("main_set_aggregate", {})
     for sid, records in main_raw.items():
         fluency_scores = [
@@ -62,7 +62,13 @@ def main() -> None:
             if r["scores"].get("fluency") is not None
         ]
         if sid in agg and fluency_scores:
-            agg[sid]["fluency_mean"] = round(sum(fluency_scores) / len(fluency_scores), 2)
+            mean_val = round(sum(fluency_scores) / len(fluency_scores), 2)
+            agg[sid]["fluency_diagnostic"] = {
+                "mean": mean_val,
+                "note": "exploratory only — Wikipedia-register model; not for primary claims",
+            }
+            # Keep legacy fluency_mean key for backward compat with existing result files
+            agg[sid]["fluency_mean"] = mean_val
 
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -70,7 +76,7 @@ def main() -> None:
     print(f"\nFluency scores added → {out_path}")
 
     # Print summary table
-    print("\nFluency summary:")
+    print("\nFluency diagnostic summary (exploratory):")
     print(f"  {'System':<25}  fluency_mean")
     for sid, a in agg.items():
         if "fluency_mean" in a:

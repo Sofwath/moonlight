@@ -300,10 +300,10 @@ def select_few_shot(
     target_lang = "DV" if source_lang == "EN" else "EN"
     lang_key = "en" if source_lang == "EN" else "dv"
 
-    def _fetch(query: str, n: int = k * 3) -> list[dict]:
+    def _fetch(query: str, n: int = k * 3, recency_days: Optional[int] = 90) -> list[dict]:
         return search_articles(
             conn, query, language=source_lang, limit=n,
-            require_paired=True, recency_days=90,
+            require_paired=True, recency_days=recency_days,
             exclude_ids=excl,
         )
 
@@ -334,6 +334,22 @@ def select_few_shot(
         for h in topic_hits:
             if h["article_id"] not in seen_ids and len(exemplars) < k:
                 exemplars.append(h)
+
+    # 3. Recency cascade: if the 90-day window left us with no exemplars at all,
+    #    widen to 365 days then to all-time so sparse topics always get at least
+    #    one. `exemplars` is guaranteed empty here, so there are no prior IDs to
+    #    carry forward — the per-iteration seen_ids is sufficient for dedup within
+    #    each widened batch.
+    if not exemplars:
+        for recency in (365, None):
+            wider_hits = _fetch(query_text, recency_days=recency)
+            seen_ids_wide: set[int] = set()
+            for h in wider_hits:
+                if h["article_id"] not in seen_ids_wide and len(exemplars) < k:
+                    exemplars.append(h)
+                    seen_ids_wide.add(h["article_id"])
+            if exemplars:
+                break
 
     # Fetch paired target articles
     result = []
@@ -415,7 +431,8 @@ def select_phrase_contexts(
             break
         hits = search_articles(
             conn, phrase, language=source_lang, limit=3,
-            require_paired=True, exclude_ids=excl,
+            require_paired=True, recency_days=730,
+            exclude_ids=excl,
         )
         for h in hits[:snippets_per_phrase]:
             if h["article_id"] in seen_ids:

@@ -88,6 +88,6 @@ WMT full MQM has dozens of categories. For this domain, 3 categories (Accuracy, 
 
 - `data/benchmark/` — JSONL data directory structure
 - `scripts/extract_benchmark_segments.py` — government genre extraction from moonlight.db
-- `data/benchmark/challenge_set/challenge_seed.jsonl` — initial 22 verified challenge pairs
+- `data/benchmark/challenge_set/challenge_seed.jsonl` — initial challenge seed entries (mixed verification status; Cat-1/Cat-4/Cat-5 contain unverified scaffold items)
 - `scripts/esa_annotate.py` — terminal ESA annotation tool
 - `docs/benchmark-design-spec.md` — full benchmark design (Phase 2 deliverable)

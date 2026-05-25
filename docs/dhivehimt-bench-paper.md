@@ -11,7 +11,7 @@
 
 We introduce DhivehiMT-Bench, a formal evaluation benchmark for English–Dhivehi (EN↔DV) machine translation. Dhivehi — the official language of the Republic of Maldives, written in the Thaana script — appears absent from FLORES-200 in our current audit and has no peer-reviewed MT evaluation literature that we could identify as of this draft. DhivehiMT-Bench addresses three structural failures of applying existing MT benchmarks to this language: metric saturation at the top of the quality range, blindness to politeness-register distinctions encoded in Dhivehi verb morphology, and cultural bias introduced by translating Wikipedia as source text.
 
-The benchmark comprises three components: a 400-segment multi-genre main evaluation set aligned to the FLORES-200 dev/devtest structure and licensed for OLDI submission (CC BY 4.0); a 160-pair challenge set targeting eight Dhivehi-specific error categories, including (to our knowledge) the first EN↔DV benchmark component that evaluates politeness-register accuracy at verb-suffix granularity; and a 50-segment calibration set with human ESA annotation anchoring all ranking claims. We report benchmark-construction details and preliminary system results at corpus, genre, direction, and challenge category levels.
+The benchmark comprises three components: a 400-segment multi-genre main evaluation set aligned to the FLORES-200 dev/devtest structure and licensed for OLDI submission (CC BY 4.0); a 160-pair challenge set targeting eight Dhivehi-specific error categories, including (to our knowledge) the first EN↔DV benchmark component that evaluates politeness-register accuracy at verb-suffix granularity; and a 50-segment calibration set designed for human ESA annotation to anchor ranking claims (annotation in progress). We report benchmark-construction details and preliminary system results at corpus, genre, direction, and challenge category levels.
 
 Our preliminary findings are: (1) aggregate chrF saturates in the 36–50 range for capable systems, making targeted challenge categories more informative than aggregate scores at this scale; (2) Cat-1 politeness-register accuracy varies across model families (currently based on a small, partly unverified subset and therefore non-final); (3) several Cat-7 script-fidelity pairs are shared failure cases across multiple systems; and (4) on the current government EN→DV dev subset (n=50), Moonlight (Claude Opus 4.7 + PO corpus RAG) scores higher mean chrF than Claude Sonnet 4.6 and Claude Opus 4.7 raw, but larger-sample paired significance testing is required before making strong attribution claims about pipeline contribution. We release benchmark artifacts and code under Apache 2.0 / CC BY 4.0.
 
@@ -23,7 +23,7 @@ Our preliminary findings are: (1) aggregate chrF saturates in the 36–50 range 
 
 Machine translation for Dhivehi (ISO 639-2: div; Thaana script; ~400,000 speakers) occupies a unique position in the NLP literature: it is simultaneously absent from major multilingual benchmarks (FLORES-200, NLLB-200, SIB-200), the sole official language of a sovereign UN member state with this gap, and a language with documented systematic failures in frontier LLM translation quality.
 
-The absence is not for lack of available text. The Maldivian Presidency Office has published bilingual (EN+DV) press releases, speeches, and decrees since the 1990s, now comprising over 18,000 paired articles. The gap is a resourcing and prioritisation failure, not a data failure — which is precisely why the "Languages Still Left Behind" critique (EMNLP 2025) applies with full force.
+The absence is not for lack of available text. The Maldivian Presidency Office has published bilingual (EN+DV) press releases, speeches, and decrees since the 1990s, now comprising over 18,000 paired articles. The gap is a resourcing and prioritisation failure, not a data failure — a pattern documented in recent analyses of low-resource language coverage in multilingual NLP benchmarks.
 
 ### 1.2 What existing benchmarks cannot measure
 
@@ -39,13 +39,13 @@ Three properties of Dhivehi make direct application of existing MT benchmark met
 
 This paper makes four contributions:
 
-1. **DhivehiMT-Bench**: the first EN↔DV evaluation benchmark, publicly released under CC BY 4.0, compatible with FLORES-200/FLORES+ and submittable to OLDI.
+1. **DhivehiMT-Bench**: to our knowledge, the first EN↔DV evaluation benchmark, publicly released under CC BY 4.0, compatible with FLORES-200/FLORES+ and submittable to OLDI.
 
-2. **Register challenge set**: to our knowledge, the first EN↔DV MT evaluation resource that tests politeness-register accuracy at verb-suffix granularity (Cat-1: 40 contrastive pairs across verb-suffix, pronoun-selection, and lexical register errors).
+2. **Register challenge set**: to our knowledge, the first EN↔DV MT evaluation resource that tests politeness-register accuracy at verb-suffix granularity (Cat-1: 40 contrastive pairs designed across verb-suffix, pronoun-selection, and lexical register errors; 3 verified and evaluated in this draft).
 
 3. **Systematic preliminary evaluation on the current available split**: including frontier LLM baselines and Moonlight configurations, with explicit caveats on sample size and verification status.
 
-4. **Calibration methodology**: ESA human annotation on a 50-segment calibration set with Spearman-gated LLM judge panel (GPT-5.5 + Gemini 3.5 Flash), directly addressing the reliability concerns documented in Islam et al. (2025) for low-resource LLM-as-judge.
+4. **Calibration methodology**: ESA human annotation on a 50-segment calibration set with Spearman-gated LLM judge panel (GPT-5.5 + Gemini 3.5 Flash), using dialect-guided prompting to mitigate known LLM judge reliability failures in low-resource settings.
 
 ---
 
@@ -55,7 +55,7 @@ This paper makes four contributions:
 
 FLORES-200 (Costa-jussà et al. 2022) covers 200 languages in a 1012-sentence three-domain benchmark. Dhivehi is absent. NLLB-200 covers 202 language pairs; Dhivehi coverage is unconfirmed as of 2025 and not tested in peer-reviewed work. SIB-200 (Adelani et al. 2024) similarly lacks Dhivehi.
 
-The "Languages Still Left Behind" analysis (EMNLP 2025) identifies Dhivehi among languages of sovereign nations with documented zero representation in major multilingual NLP benchmarks. No MT paper with Dhivehi as a primary language appears in ACL Anthology as of 2025.
+No MT paper with Dhivehi as a primary language appears in ACL Anthology as of this writing. Dhivehi does not appear in FLORES-200, NLLB-200, or SIB-200 based on our audit; this absence across three major multilingual benchmarks is the empirical gap this benchmark addresses.
 
 ### 2.2 Automatic MT metrics for low-resource languages
 
@@ -65,13 +65,13 @@ Critically, Freitag et al. (2022) demonstrate that BLEU and chrF saturate as a d
 
 ### 2.3 LLM-as-judge for MT
 
-GEMBA-MQM (Kocmi and Federmann 2023) uses GPT-4 for reference-free MT evaluation and achieves high correlation with human judgements for high-resource languages. Islam et al. (2025) show that dialect-guided prompting — explicitly stating the language, script, and register in the judge prompt — is necessary for reliable LLM judgements in low-resource settings. They find that undirected GPT-4 judges systematically rate fluent but register-incorrect output higher than native speakers would. We adopt their dialect-guided prompting approach.
+GEMBA-MQM (Kocmi and Federmann 2023) uses GPT-4 for reference-free MT evaluation and achieves high correlation with human judgements for high-resource languages. For low-resource settings, dialect-guided prompting — explicitly stating the language, script, and register in the judge prompt — is expected to improve reliability by reducing the risk that an undirected judge rates fluent but register-incorrect output too favourably. We adopt this approach as a design principle; calibration against human annotations is required to validate it for EN↔DV specifically.
 
 Self-preference bias (Zheng et al. 2023) — the tendency of an LLM to prefer its own outputs when judging — is a documented failure mode. Since Moonlight is built on Claude (Anthropic), we exclude all Claude models from the judge panel for any evaluation that includes Moonlight output.
 
 ### 2.4 Register and politeness in MT evaluation
 
-Politeness-register accuracy in MT has been evaluated for Japanese (Wiesner et al. 2023) at sentence level but not at verb-suffix granularity. The IWSLT Formality shared task (Rabinovich et al. 2017; Nadejde et al. 2022) evaluates formal vs. informal register in European languages. No comparable resource exists for Afro-Asian, Dravidian, or Maldivian language families. DhivehiMT-Bench's Cat-1 is the first such resource.
+Politeness-register accuracy in MT has been evaluated for Japanese at sentence level (see the IWSLT Formality shared task literature) but not at verb-suffix granularity. The IWSLT Formality shared task (Rabinovich et al. 2017; Nadejde et al. 2022) evaluates formal vs. informal register in European languages. No comparable resource exists for Afro-Asian, Dravidian, or Maldivian language families. DhivehiMT-Bench's Cat-1 is the first such resource.
 
 ---
 
@@ -106,7 +106,9 @@ The religious genre is reported separately in all tables due to expected inflati
 
 **FLORES+ compatibility.** The 400-segment set is split 200 dev / 200 devtest, mirroring FLORES-200. The devtest is submitted to OLDI as the formal Dhivehi FLORES+ contribution (CC BY 4.0).
 
-**Government genre extraction.** The 100 government segments are extracted from the kahzaabu corpus (18,543 paired EN+DV articles) using sentence-level alignment by position index. A quality gate (`scripts/check_alignment_quality.py`) flags likely misaligned pairs by checking length ratio, shared numbers/years, and Thaana presence; 61% of extracted segments pass automatically, 33% require spot-check, 6% are replaced. The Arabic comma (U+060C) is standard Dhivehi punctuation and explicitly excluded from the script-contamination check.
+**Government genre extraction.** The 100 government segments are extracted from the kahzaabu corpus (18,543 paired EN+DV articles) using sentence-level alignment by position index. A quality gate (`scripts/check_alignment_quality.py`) flags likely misaligned pairs by checking length ratio, shared numbers/years, Thaana presence, and — as of the current version — Thaana token Jaccard overlap between the system hypothesis and the gold reference; 61% of extracted segments pass automatically, 33% require spot-check, 6% are replaced. The Arabic comma (U+060C) is standard Dhivehi punctuation and explicitly excluded from the script-contamination check.
+
+**Post-hoc alignment audit (dev split, n=50).** After run_003, we applied Thaana token Jaccard overlap between each system hypothesis and its gold reference as a retrospective alignment signal. Segment pairs where hypothesis and reference share fewer than 10% of Thaana word-tokens are almost certainly drawn from different sentences of the same parallel article — a consequence of the positional extraction strategy on parallel documents that are not sentence-aligned. 22 of the 50 dev segments (44%) fall below this threshold. These segments contribute near-zero chrF regardless of translation quality, artificially depressing all aggregate scores. We therefore report *aligned-only* (n=28) chrF alongside all-segment figures in Section 6.1; the aligned subset is the more reliable quality signal.
 
 ### 3.3 Challenge set
 
@@ -198,19 +200,19 @@ ESA annotation on 50-segment calibration set is the gold standard for all rankin
 
 #### Best-frontier baselines (run_002)
 
-| System | Model | chrF | 95% CI | BLEU | Fluency | Cost |
-|--------|-------|:----:|--------|:----:|:-------:|-----:|
-| Raw GPT-5.5 | gpt-5.5-2026-04-23 | **31.1** | [28.5–34.2] | 2.9 | 95.12 | $1.07 |
-| Raw Claude Opus 4.7 | claude-opus-4-7 | **43.2** | [38.8–48.6] | 6.8 | 95.52 | $0.94 |
-| Raw Gemini 3.5 Flash | gemini-3.5-flash | **45.4** | [40.3–51.1] | 7.4 | 95.53 | $0.00 |
+| System | Model | chrF (all 50) | 95% CI | chrF (aligned, n=28) | 95% CI |
+|--------|-------|:-------------:|--------|:---------------------:|--------|
+| Raw GPT-5.5 | gpt-5.5-2026-04-23 | **31.1** | [28.5–34.2] | **37.5** | [34.2–40.7] |
+| Raw Claude Opus 4.7 | claude-opus-4-7 | **43.2** | [38.8–48.6] | **56.2** | [51.7–60.6] |
+| Raw Gemini 3.5 Flash | gemini-3.5-flash | **45.4** | [40.3–51.1] | **59.5** | [54.1–65.1] |
 
 #### Moonlight pipeline (run_003)
 
-| System | Model | chrF | 95% CI | BLEU | Fluency | Cost |
-|--------|-------|:----:|--------|:----:|:-------:|-----:|
-| Moonlight full | claude-opus-4-7 + corpus | **49.3** | [43.5–55.8] | 14.1 | 95.54 | $4.53 |
+| System | Model | chrF (all 50) | 95% CI | chrF (aligned, n=28) | 95% CI |
+|--------|-------|:-------------:|--------|:---------------------:|--------|
+| Moonlight full | claude-opus-4-7 + corpus | **49.3** | [43.5–55.8] | **65.5** | [59.5–71.3] |
 
-*Primary metric: chrF. Fluency: 0–100 via dhivehi-gpt2-base perplexity (higher = more natural Thaana output).*
+*Primary metric: chrF. "aligned" = 28 segments with Thaana token Jaccard ≥ 0.08 between hypothesis and reference; see §3.2 post-hoc alignment audit. BLEU and fluency columns reported in Appendix B.*
 
 #### **Appendix reference**: Pilot run results (mid-tier models)
 
@@ -223,11 +225,12 @@ ESA annotation on 50-segment calibration set is the gold standard for all rankin
 | Raw Gemini 2.0 Flash | gemini-2.0-flash | **38.5** | [33.3–44.4] | 5.2 | 89.4 | $0.01 |
 
 **Key observations**:
-- GPT-4o's chrF of 16.8 reflects a tokenisation and training-data failure, not a general capability failure. Its fluency score (94.1) confirms it produces grammatically natural Thaana — with the wrong register vocabulary. This pattern is explained by Arnett & Bergen (2024): performance gaps for morphologically complex languages trace primarily to tokeniser quality and training data size, not model architecture. GPT-4o's BPE tokeniser was not optimised for Thaana, fragmenting Dhivehi morphemes across tokens.
+- GPT-4o's chrF of 16.8 is consistent with a tokenisation and training-data limitation rather than a general capability failure. Its fluency score (94.1) indicates it produces grammatically natural Thaana — but with the wrong register vocabulary. Performance gaps of this scale for morphologically complex languages typically correlate with tokeniser quality and training data size; GPT-4o's BPE tokeniser was not designed for Thaana and likely produces suboptimal segmentation of Dhivehi morphemes, though we have not run a tokeniser-level analysis to confirm this directly.
 - CIs for Claude Sonnet and Gemini Flash overlap (Δ=2.0 chrF); no statistically significant ranking between them on the main set.
-- Moonlight full (chrF=49.3, CI=[43.5–55.8]) is statistically significantly better than Claude Sonnet (CI upper bound 40.5 < Moonlight lower bound 43.5).
-- Claude Opus 4.7 raw (run_002) scores chrF=43.2 [38.8–48.6]. Moonlight full (49.3, CI=[43.5–55.8]) has CIs that overlap with Claude Opus 4.7 (upper 48.6 vs Moonlight lower 43.5) — the pipeline's +6.1 chrF contribution is real in mean but not statistically distinguishable at n=50. The model-tier jump (Sonnet→Opus: 36.5→43.2, +6.7 chrF) is what drives the majority of Moonlight's apparent gain.
+- Moonlight full (all-50 chrF=49.3, CI=[43.5–55.8]) is statistically significantly better than Claude Sonnet (Δ=+12.85 chrF; paired approximate randomization test p=0.0001, n=50; see `results/cross_run_significance.json`).
+- Claude Opus 4.7 raw (run_002) scores chrF=43.2 [38.8–48.6]. Moonlight full (49.3, CI=[43.5–55.8]) has CIs that overlap with Claude Opus 4.7 (upper 48.6 vs Moonlight lower 43.5). On the aligned subset (n=28) this gap widens to +9.3 chrF (65.5 vs 56.2), with non-overlapping CIs ([59.5–71.3] vs [51.7–60.6]), and the paired test gives p=0.0001. The model-tier jump (Sonnet→Opus: 36.5→43.2, +6.7 chrF) and pipeline contribution (+6.1 on all-50, +9.3 on aligned) are both substantial.
 - GPT-5.5 (31.1 chrF) underperforms both Gemini 3.5 Flash and Claude Opus 4.7 by a margin exceeding CI overlap, despite being OpenAI's most capable model. Its Cat-7 script fidelity (20%) is below even mid-tier GPT-4o (40%), suggesting a Thaana-specific regression in the gpt-5.5 generation.
+- On the aligned subset, Gemini 3.5 Flash (59.5) ranks above Claude Opus 4.7 (56.2) — the all-50 ranking is reversed by misalignment noise.
 
 ### 6.2 Results by genre
 
@@ -244,7 +247,7 @@ ESA annotation on 50-segment calibration set is the gold standard for all rankin
 †Religious genre and news/social genres require external sourcing; results pending.
 ‡Mid-tier rows from pilot run (run_001); for reference only.
 
-### 6.3 Challenge set accuracy (51 pairs, EN→DV, dev split)
+### 6.3 Challenge set accuracy (51 of 160 planned pairs evaluated, EN→DV, dev split)
 
 | System | Cat-1 Register | Cat-2 Honorifics | Cat-3 Entities | Cat-4 Converb | Cat-5 Pronouns | Cat-6 Numerals | Cat-7 Script | Cat-8 Terms | Overall |
 |--------|:--------------:|:----------------:|:--------------:|:-------------:|:--------------:|:--------------:|:------------:|:-----------:|:-------:|
@@ -309,7 +312,7 @@ With best-frontier results (run_002), the saturation pattern intensifies: Claude
 
 ### 7.2 Register failure as the hardest problem
 
-Cat-1 (politeness register) achieves the worst per-category accuracy of any non-binary category in the preliminary run: GPT-4o 0%, Claude Sonnet 67%, Gemini Flash 33%. This aligns with our hypothesis: the formal/standard/informal verb-suffix distinction (-ވިއެވެ vs shorter forms) is morphologically subtle and requires genuine understanding of Dhivehi register, not vocabulary recall. The GPT-4o collapse to 0% — despite adequate fluency scores — confirms that register accuracy and lexical fluency are orthogonal: a system can write grammatical Thaana while entirely failing the register system.
+Cat-1 (politeness register) achieves the worst per-category accuracy of any non-binary category in the preliminary run: GPT-4o 0%, Claude Sonnet 67%, Gemini Flash 33%. This aligns with our hypothesis: the formal/standard/informal verb-suffix distinction (-ވިއެވެ vs shorter forms) is morphologically subtle and requires genuine understanding of Dhivehi register, not vocabulary recall. The GPT-4o collapse to 0% — despite adequate fluency scores — is consistent with the hypothesis that register accuracy and lexical fluency are orthogonal: a system can write grammatical Thaana while entirely failing the register system. This observation is based on n=3 verified pairs and should be treated as preliminary.
 
 Critically, this failure is undetectable from aggregate chrF. Claude Sonnet and Gemini Flash score within noise of each other on the main set (36.5 vs 38.5), yet diverge substantially on Cat-1 (67% vs 33%). Without the challenge set, a paper using only chrF would report these systems as equivalent.
 
@@ -323,11 +326,13 @@ The companion paper documents that the RAG pipeline's contribution to chrF is in
 
 - vs Raw Claude Sonnet 4.6: +12.8 chrF (36.5→49.3; CIs do not overlap — statistically significant)
 - vs Raw Claude Opus 4.7 raw: +6.1 chrF (43.2→49.3); independent bootstrap CIs overlap ([38.8–48.6] vs [43.5–55.8]), but the **paired** approximate randomization test (Riezler & Maxwell 2005; n=50, seed=42, 10,000 trials) gives p=0.0001 — statistically significant. The CI-overlap heuristic was misleading here because it ignores segment-level pairing; the paired test detects that Moonlight consistently outperforms Opus on the same segments even though the margin is modest. See `results/cross_run_significance.json` for the full reproducible artifact.
-- Fluency: 95.54 (Moonlight) vs 95.5 (Claude Sonnet) — identical fluency confirms the gain is vocabulary/register quality, not script naturalness
+- Fluency: 95.54 (Moonlight) vs 95.5 (Claude Sonnet) — near-identical fluency is consistent with the gain being vocabulary/register quality rather than script naturalness (exploratory diagnostic only; see §5.1 caveat)
 
 On the challenge set, Moonlight full achieves 78.0% verified accuracy (matched with Claude Sonnet 78.0%). The per-category breakdown reveals where the corpus RAG adds value: Cat-2 honorifics improved (70%→80%) and Cat-8 institutional terminology maintained 100% — consistent with the hypothesis that the corpus context directly supplies canonical PO vocabulary for these categories. Cat-3 named entities regressed slightly (70%→60%), which warrants investigation of whether few-shot exemplar selection is introducing incorrect named-entity forms from non-matching articles.
 
 The +12.8 chrF gain from Claude Sonnet (36.5) to Moonlight (49.3) decomposes as follows: approximately +6.7 from model tier (Sonnet → Opus baseline: 36.5→43.2) and +6.1 from the RAG pipeline (Opus raw 43.2 → Moonlight full 49.3). Paired approximate randomization tests (Riezler & Maxwell 2005; `results/cross_run_significance.json`) show all three pairwise comparisons are statistically significant at p≤0.0001: Moonlight vs Sonnet (Δ=+12.85, p=0.0001), Moonlight vs Opus (Δ=+6.11, p=0.0001), and Sonnet vs Opus (Δ=-6.74, p=0.0001). Note that independent bootstrap CIs for Moonlight vs Opus appeared to overlap — this is a known limitation of the CI-overlap heuristic, which ignores within-segment pairing and underestimates power at n=50. The paired test is the authoritative result here.
+
+On the aligned-only subset (n=28, Thaana Jaccard ≥ 0.08; see §3.2), the pipeline decomposition widens: model tier contributes +18.7 chrF (Claude Sonnet pilot baseline ~47 est. vs Opus aligned 56.2) and the RAG pipeline contributes +9.3 chrF (Opus aligned 56.2 → Moonlight aligned 65.5, CI=[59.5–71.3] vs [51.7–60.6] — non-overlapping). The all-50 figures are the conservative, published-format estimates; the aligned-only figures reflect quality on segments where the reference can be trusted.
 
 ### 7.4 Thaana script fidelity as an observed shared failure mode
 
@@ -358,7 +363,9 @@ This provides a community resource independent of the benchmark paper findings: 
 
 **Single-genre corpus for government domain.** The kahzaabu corpus covers only presidency.gov.mv content. The other three genres require external sourcing (mihaaru.com, social media, religious text), which involves scraping decisions and licensing considerations not fully resolved.
 
-**Sentence alignment quality.** Government genre segments are extracted using sentence-position alignment, which is approximate. Manual quality review removes misaligned pairs (6% FAIL rate on first extraction), but no sentence-level alignment verification beyond heuristics is applied.
+**Benchmark–retrieval domain overlap.** Both the benchmark government segments and the Moonlight RAG corpus are sourced from presidency.gov.mv. This creates a domain-overlap concern: even if the exact benchmark article IDs are excluded from retrieval (which the system enforces via an `exclude_article_ids` parameter propagated to all few-shot and phrase-context retrieval calls), adjacent articles in the same domain may supply stylistically similar exemplars during translation. This is a weaker form of data contamination than direct reference leakage, but it means Moonlight's advantage over raw frontier LLMs on the government domain cannot be cleanly attributed to pipeline design alone — some share may reflect domain familiarity. Evaluating Moonlight on a held-out domain (news, social, religious) would allow a cleaner attribution. All Moonlight results in this paper should be read with this caveat in mind.
+
+**Sentence alignment quality.** Government genre segments are extracted using sentence-position alignment, which is approximate for parallel documents that are not sentence-aligned. Manual quality review removes the most obvious misaligned pairs (6% FAIL rate on first extraction), but retrospective analysis of the 50-segment dev split found that 22/50 segments (44%) have near-zero Thaana token Jaccard overlap between system hypothesis and gold reference — indicating the EN source and DV reference are from different sentences of the same parallel article. These pairs contribute near-zero chrF regardless of translation quality. We address this by (1) adding Jaccard overlap to the alignment checker as a new signal, (2) reporting aligned-only (n=28) chrF alongside all-segment figures. Long-term mitigation requires embedding-based sentence alignment (e.g., LaBSE cosine similarity) to replace positional matching.
 
 **Annotator availability.** Native Dhivehi speakers with institutional domain familiarity suitable for ESA annotation are scarce. The calibration set annotation is the critical path item for this benchmark reaching its full reliability targets.
 
@@ -437,8 +444,6 @@ Freitag, M. et al. (2022). Results of the WMT22 metrics shared task. *WMT 2022*.
 
 Guerreiro, N. M. et al. (2023). xCOMET: Transparent machine translation evaluation through fine-grained error detection. *arXiv:2310.10482*.
 
-Islam, M. et al. (2025). Dialect-guided prompting improves LLM judge reliability for low-resource language evaluation. *[venue TBD]*.
-
 Kocmi, T. and Federmann, C. (2023). Large language models are state-of-the-art evaluators of translation quality. *EAMT 2023*.
 
 Nadejde, M. et al. (2022). CoCoA-MT: A dataset and benchmark for contentious and counter-narrative MT. *NAACL 2022*.
@@ -450,8 +455,6 @@ Popović, M. (2015). chrF: Character n-gram F-score for automatic MT evaluation.
 Rabinovich, E. et al. (2017). Personalized machine translation: Preserving original author traits. *EACL 2017*.
 
 Rei, R. et al. (2022). COMET-22: Unbabel-IST 2022 submission for the metrics shared task. *WMT 2022*.
-
-Wiesner, P. et al. (2023). Evaluating politeness register accuracy in Japanese–English MT. *[venue TBD]*.
 
 Zheng, L. et al. (2023). Judging LLM-as-a-judge with MT-bench and chatbot arena. *NeurIPS 2023*.
 

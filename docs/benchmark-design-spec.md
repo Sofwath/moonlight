@@ -75,7 +75,7 @@ The novel contribution. Dhivehi encodes three register levels:
 
 Test design: same semantic content, correct register vs. wrong register. Each of the 40 pairs targets one of:
 - Verb suffix register mismatch (20 pairs)
-- Pronoun selection mismatch — ތިމަންނ vs. އަހަރެން for first person (10 pairs)
+- Pronoun selection mismatch — formal first-person variants (e.g. އަޅުގަނޑު) vs. informal alternatives for first person (10 pairs; pending native-speaker verification)
 - Lexical register mismatch — classical vs. colloquial vocabulary choice (10 pairs)
 
 Ground truth: PO-published text is the reference for formal register; informal texts from social media for informal.

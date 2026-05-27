@@ -949,6 +949,9 @@ textarea.wb-input::placeholder {
                     <label class="verify-label" title="Back-translate to verify entity preservation. Doubles cost.">
                         <input type="checkbox" x-model="verify"> Verify
                     </label>
+                    <label class="verify-label" title="Run Claude Sonnet + Gemini Pro in parallel, pick best via MBR consensus. ~2× cost, same speed.">
+                        <input type="checkbox" x-model="multiModel"> ⚡ Best of 2
+                    </label>
                 </div>
             </div>
         </div>
@@ -1072,6 +1075,13 @@ textarea.wb-input::placeholder {
                     x-text="speaking ? '⏹ Stop' : '🔊 Listen'"
                 ></button>
                 <span class="wb-meta" x-text="fmtCost(result?.cost_usd) + (result?.cache_hit ? ' (cached)' : '') + ' · ' + (result?.model || '')"></span>
+                <span
+                    x-show="result?.multi_model && result?.model_winner"
+                    class="wb-meta"
+                    style="margin-left:6px; color: var(--primary); font-weight:600;"
+                    :title="result?.model_translations ? '🔵 Claude: ' + (result.model_translations['claude-sonnet'] || '') + '\n\n🟢 Gemini: ' + (result.model_translations['gemini-pro'] || '') : ''"
+                    x-text="'⚡ won: ' + (result?.model_winner || '')"
+                ></span>
             </div>
         </div>
 

@@ -49,6 +49,7 @@ function workbenchApp() {
         model: 'sonnet',
         nCandidates: 1,
         verify: false,
+        multiModel: false,
         thaanaKeyboard: false,
         editingSource: false,
         hoveredSourceWord: null,
@@ -368,6 +369,7 @@ function workbenchApp() {
                         mode: this.mode,
                         model: this.model,
                         n_candidates: +this.nCandidates || 1,
+                        multi_model: this.multiModel,
                     }),
                 });
                 const data = await r.json();

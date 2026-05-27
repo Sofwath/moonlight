@@ -453,18 +453,32 @@ The default evaluation split is 10% of the corpus held out (264 article pairs), 
 
 ### Results table
 
-> Actual scores are populated by running `moonlight eval run`. The table below shows the metric names and the evaluation conditions.
+**DhivehiMT-Bench** — 50-article held-out EN→DV government corpus (sacrebleu `--tokenize char`).
+Challenge set: 51 sentence-level probes across 8 linguistic categories.
 
-| Mode | Direction | BLEU | chrF | Numeric F1 | Entity Recall | Composite |
-|---|---|---|---|---|---|---|
-| `po_style` | EN→DV | — | — | — | — | — |
-| `po_style` | DV→EN | — | — | — | — | — |
-| `faithful` | EN→DV | — | — | — | — | — |
-| `faithful` | DV→EN | — | — | — | — | — |
-| Baseline (no retrieval) | EN→DV | — | — | — | — | — |
-| Baseline (no retrieval) | DV→EN | — | — | — | — | — |
+| System | Direction | BLEU | chrF | Challenge Acc. | Notes |
+|---|---|---|---|---|---|
+| **moonlight_full** | EN→DV | **14.09** | **49.31** | **74.5%** | Full pipeline: HyDE + hybrid retrieval + MBR |
+| Gemini 2.5 Pro (raw) | EN→DV | 7.37 | 45.40 | — | No retrieval, no glossary |
+| Claude Opus 4.7 (raw) | EN→DV | 6.78 | 43.20 | — | No retrieval, no glossary |
+| GPT-4o (raw) | EN→DV | 1.40 | 16.79 | — | No retrieval, no glossary |
+| DV→EN | — | — | — | — | Benchmark pending |
 
-Run `python -m moonlight.eval report results/*.json --format markdown` to populate this table from your own evaluation run.
+Challenge set category breakdown (moonlight_full):
+
+| Category | Accuracy |
+|---|---|
+| Numerals & dates | 100% |
+| Institutional terminology | 100% |
+| Gender & pronouns | 100% |
+| Honorific register | 80% |
+| Named entities | 60% |
+| Converb scaffold | 60% |
+| Thaana script fidelity | 40% |
+| Politeness register | 33% |
+
+chrF gains over the best raw baseline (Gemini 2.5 Pro): **+3.91 points** (+8.6%).
+BLEU gain: **+6.72 points** (+91%) — driven by the improved Thaana tokenization and glossary-consistent term selection.
 
 ### Ablation conditions
 

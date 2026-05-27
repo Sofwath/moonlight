@@ -51,28 +51,35 @@ The category is inferred from the article title and URL segment, not from a stab
 
 | Metric | Value |
 |---|---|
-| Total article pairs | 2,648 |
-| Held-out evaluation set | 264 (10%, stratified by category and year) |
-| Training/retrieval set | 2,384 |
-| EN tokens (whitespace-split) | ~2.1M |
-| DV tokens (whitespace-split) | ~1.9M |
-| Sentence-pair alignments | ~38,000 |
+| Total article pairs | ~7,100 |
+| Held-out evaluation set | ~710 (10%, stratified by category and year) |
+| Training/retrieval set | ~6,390 |
+| EN tokens (whitespace-split) | ~29M |
+| DV tokens (whitespace-split) | ~26M |
+| Sentence-pair alignments | ~140,000 |
+| Glossary terms | 26,771 |
 | Date range | 2019 – present |
 | Average EN article length | ~420 words |
 | Average DV article length | ~380 whitespace units |
 
-### Year distribution
+### Corpus sources
 
-The corpus is not uniformly distributed over time. Article volume increased significantly after 2020. The held-out split is stratified by year bucket to ensure evaluation covers the full date range:
+The corpus is built from two sources:
+
+1. **Presidency Office website** (`scripts/scrape_presidency.py`) — iterates article IDs 28,000–36,715, fetching EN and DV versions via the language toggle link. Paired articles are stored with bidirectional `paired_id` references.
+
+2. **Scraped incrementally** — the scraper is resumable; re-runs skip already-imported articles. After scraping, run `moonlight build-embeddings` to encode new sentences.
+
+### Year distribution
 
 | Period | Approx pairs |
 |---|---|
-| 2019 | ~200 |
-| 2020 | ~450 |
-| 2021 | ~550 |
-| 2022 | ~600 |
-| 2023 | ~550 |
-| 2024+ | ~298 |
+| 2019 | ~400 |
+| 2020 | ~900 |
+| 2021 | ~1,100 |
+| 2022 | ~1,500 |
+| 2023 | ~1,700 |
+| 2024–2026 | ~1,500 |
 
 The 2020–2022 period is the densest because of elevated presidential communication volume during the COVID-19 response.
 
@@ -135,22 +142,25 @@ This imports article pairs and their EN/DV content directly.
 ### From scratch (scrape)
 
 ```bash
-# Scrape all articles (takes ~2–3 hours; respects robots.txt; 1.5s delay)
-python -m moonlight.corpus scrape \
-    --out data/moonlight.db \
-    --delay 1.5
-
-# Run sentence alignment
-python -m moonlight.corpus align --db data/moonlight.db
+# Scrape Presidency Office articles by ID range (2s delay between requests)
+python scripts/scrape_presidency.py --id-range 28000 40000
 
 # Build FTS5 indices
-python -m moonlight.corpus index --db data/moonlight.db
+moonlight db-init
 
-# Build embedding vectors (requires sentence-transformers)
-python -m moonlight.corpus embed --db data/moonlight.db
+# Build embedding vectors (runs locally on MPS/CUDA/CPU, free)
+moonlight build-embeddings
+
+# Mine glossary terms from the full corpus (~$2 with Gemini Flash)
+moonlight build-glossary --model gemini-flash --budget 10
+
+# Subsequent incremental runs (only processes new articles)
+moonlight build-glossary
 ```
 
-Building embeddings takes approximately 10 minutes on CPU (MiniLM-L12-v2 is fast). On a machine with a GPU, this drops to under 2 minutes.
+Building embeddings takes approximately 10 minutes on CPU (MiniLM-L12-v2 is fast). On Apple Silicon (MPS), this drops to under 2 minutes.
+
+The glossary builder normalises all extracted EN terms against the PO's own English publications — so "atoll" becomes "Atoll", "rufiyaa" becomes "Rufiyaa", etc. — using `_attest_en_term()` applied as a single post-aggregation pass over the full EN corpus.
 
 ---
 

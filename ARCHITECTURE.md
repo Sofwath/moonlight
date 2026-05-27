@@ -56,6 +56,7 @@ This document describes the internal design of the Moonlight translation engine:
 │       │                                                                  │
 │       ▼                                                                  │
 │  moonlight.retrieve                                                      │
+│  ├── HyDE (EN→DV): generate cheap DV hypothesis → embed DV↔DV         │
 │  ├── FTS5 BM25 query against articles_fts + sentence_pairs_fts          │
 │  ├── Embedding similarity query against sentence_pair_embeddings        │
 │  └── Reciprocal Rank Fusion → ranked list of (article_pair, sent_pair) │
@@ -67,18 +68,20 @@ This document describes the internal design of the Moonlight translation engine:
 │       ▼                                                                  │
 │  moonlight.prompt                                                        │
 │  ├── Layer 1: system instruction (mode-dependent)                       │
-│  ├── Layer 2: glossary injection (matched terms from translation_glossary│
+│  ├── Layer 2: glossary injection (26,771 PO-attested EN↔DV terms)      │
 │  ├── Layer 3: sentence TM (top-k sentence pairs from retrieval)         │
 │  └── Layer 4: article few-shot (2–3 full article pairs)                 │
 │       │                                                                  │
 │       ▼                                                                  │
-│  LLM API call × N (default N=3, configurable)                           │
+│  LLM API call(s)                                                         │
+│  ├── Single model: 1–3 candidates scored via MBR (chrF consensus)      │
+│  └── multi_model=True: Claude Sonnet + Gemini Pro parallel → MBR pick  │
 │       │                                                                  │
 │       ▼                                                                  │
-│  moonlight.score                                                         │
-│  ├── numeric_f1: extract numbers from input, check presence in output  │
-│  ├── entity_recall: check place names and person names                  │
-│  └── length_ratio: penalise extreme deviation from expected ratio       │
+│  Post-generation gates                                                   │
+│  ├── MBR selection: pairwise chrF consensus picks the winner            │
+│  ├── Foreign script sanitizer: removes stray CJK/Arabic/Thaana chars   │
+│  └── Entity check: numbers, place names, titles must survive            │
 │       │                                                                  │
 │       ▼                                                                  │
 │  Best candidate → TranslationResult                                     │

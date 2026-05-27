@@ -2,7 +2,7 @@
 
 > *Moonlight* was the Maldives' first English-language daily newspaper, published during the late Nasir era and ceasing publication in December 1978 — after which Haveeru Daily was launched to fill the gap. This project borrows the name to honour that early experiment in English-language publishing in the Maldives, and because the work here is similarly about bridging Dhivehi and English — carefully, in context, with attention to register.
 
-Moonlight is a standalone English ↔ Dhivehi translation engine that uses retrieval-augmented prompting against a paired corpus of ~2,648 Presidency Office press releases. It is extracted from the [kahzaabu](https://github.com/sofwath/kahzaabu) fact-checking pipeline and designed to operate independently.
+Moonlight is a standalone English ↔ Dhivehi translation engine that uses retrieval-augmented prompting against a paired corpus of ~7,100 Presidency Office press releases and speeches, backed by a 26,771-term bilingual glossary mined from that corpus. It is extracted from the [kahzaabu](https://github.com/sofwath/kahzaabu) fact-checking pipeline and designed to operate independently.
 
 ---
 
@@ -65,7 +65,9 @@ The kahzaabu fact-checking pipeline needs translation as a sub-step — it reads
 │  │  │  FTS5 BM25   │        │  Multilingual Embeddings    │    │    │
 │  │  │  (SQLite)    │        │  (paraphrase-MiniLM-L12-v2) │    │    │
 │  │  └──────┬───────┘        └──────────────┬──────────────┘    │    │
-│  │         │                               │                    │    │
+│  │         │                               ▲                    │    │
+│  │         │                    HyDE: EN→DV hypothesis          │    │
+│  │         │                    embeds DV↔DV (not EN↔DV)       │    │
 │  │         └──────────┬────────────────────┘                    │    │
 │  │                    ▼                                          │    │
 │  │          Reciprocal Rank Fusion                               │    │
@@ -77,24 +79,24 @@ The kahzaabu fact-checking pipeline needs translation as a sub-step — it reads
 │  │                     Prompt Construction                        │    │
 │  │                                                               │    │
 │  │   Layer 1: System instruction + mode (faithful / po_style)   │    │
-│  │   Layer 2: Terminology glossary (domain terms + place names) │    │
+│  │   Layer 2: Glossary (26,771 PO-attested EN↔DV terms)        │    │
 │  │   Layer 3: Sentence-level TM matches (5–10 pairs)            │    │
 │  │   Layer 4: Article-level few-shot exemplars (2–3 full pairs) │    │
 │  └──────────────────────────────────────────────────────────────┘    │
 │           │                                                           │
 │           ▼                                                           │
 │  ┌──────────────────────────────────────────────────────────────┐    │
-│  │              Frontier LLM  (N=3 candidates)                   │    │
+│  │   Frontier LLM  (single model or Claude+Gemini parallel)      │    │
 │  └──────────────────────────────────────────────────────────────┘    │
 │           │                                                           │
 │           ▼                                                           │
 │  ┌──────────────────────────────────────────────────────────────┐    │
-│  │                    Candidate Scoring                           │    │
+│  │              MBR Candidate Selection (chrF consensus)          │    │
 │  │                                                               │    │
-│  │   • Numeric F1  (dates, amounts, percentages must survive)   │    │
-│  │   • Entity recall (place names, person titles)               │    │
-│  │   • Length ratio (penalise extreme compression/expansion)    │    │
-│  │   → Best candidate selected                                  │    │
+│  │   • chrF pairwise consensus (Best-of-N or cross-model)       │    │
+│  │   • Entity check gate (numbers, place names, titles)         │    │
+│  │   • Foreign script sanitizer (strips stray CJK/Arabic chars) │    │
+│  │   → Best translation selected                                │    │
 │  └──────────────────────────────────────────────────────────────┘    │
 │           │                                                           │
 │           ▼                                                           │
@@ -147,10 +149,17 @@ moonlight build-embeddings
 # Without this step the translator falls back to pure BM25 — still functional.
 ```
 
-> Mine glossary terms from the corpus (~$0.05 per article pair):
+> Mine glossary terms from the full corpus (incremental by default; uses Gemini Flash at ~$0.0003/pair):
 
 ```bash
-moonlight build-glossary --sample 200 --budget 10.0
+# First run: processes entire corpus (~$2–3 with Gemini Flash)
+moonlight build-glossary --model gemini-flash --budget 10
+
+# Subsequent runs: only processes articles added since last build
+moonlight build-glossary
+
+# Full rebuild from scratch (reprocesses everything)
+moonlight build-glossary --full-rebuild
 ```
 
 ### Translate a sentence
@@ -221,7 +230,15 @@ The workbench is a browser-based translation analysis UI with five tabs:
 | **Word Detail** | Click any output token → glossary entry + 5 concordance snippets from the corpus |
 | **Phrases** | Noun-phrase contexts retrieved for specific terms in the input |
 | **Quality** | Entity check results and back-translation comparison |
-| **Glossary** | Searchable EN↔DV terminology browser (3,000+ terms) |
+| **Glossary** | Searchable EN↔DV terminology browser (26,000+ terms) |
+
+Controls in the toolbar:
+
+| Control | Description |
+|---|---|
+| `N=1/2/3` | Best-of-N via MBR (chrF consensus). N=3 adds ~+0.06 chrF at 3× cost. |
+| `⚡ Best of 2` | Runs Claude Sonnet + Gemini Pro in **parallel** and picks the winner via MBR. Same latency as a single call, ~2× cost. |
+| `Verify` | Back-translation entity check. Flags numbers or proper nouns lost in translation. |
 
 Output tokens are clickable. Thaana verbs are badged by register (honorific, formal, perfective). Word alignment arcs connect source and target tokens.
 
@@ -283,12 +300,13 @@ Each article has a canonical ID. The EN and DV versions share the same ID, makin
 
 | Metric | Value |
 |---|---|
-| Total article pairs | 2,648 |
-| EN tokens (approx) | ~2.1M |
-| DV tokens (approx) | ~1.9M |
+| Total article pairs | ~7,100 |
+| EN tokens (approx) | ~29M |
+| DV tokens (approx) | ~26M |
 | Date range | 2019 – present |
 | Average article length (EN) | ~420 words |
-| Sentence-pair alignments | ~38,000 |
+| Sentence-pair alignments | ~140,000 |
+| Glossary terms | 26,771 |
 
 Note: "tokens" here means whitespace-split tokens for EN, and space-equivalent units for DV — Thaana does not use spaces between morphological units in the same way Latin script does. Actual subword token counts (as seen by the LLM) are higher.
 
@@ -505,10 +523,10 @@ Being direct about what Moonlight does not do well:
 If you use Moonlight in research, please cite it as:
 
 ```
-@software{moonlight2024,
+@software{moonlight2026,
   author = {Mohamed, Sofwathullah},
   title  = {Moonlight: A Retrieval-Augmented English–Dhivehi Translation Engine},
-  year   = {2024},
+  year   = {2026},
   url    = {https://github.com/sofwath/moonlight}
 }
 ```

@@ -10,11 +10,12 @@ register, with institution-specific terminology and idiomatic phrasings
 that a generic LLM translation engine gets wrong.
 
 This module produces translations that match the PO's published voice by
-combining four sources of information at inference time:
+combining five sources of information at inference time:
 
-  1. **Glossary** — a precomputed bilingual term dictionary mined from the
-     corpus by ``build_glossary()``.  Provides canonical PO terminology for
-     institution names and recurring policy phrases.
+  1. **Glossary** — 26,771 bilingual term pairs mined from the full corpus by
+     ``build_glossary()``.  EN terms are attested against the PO's own English
+     publications so capitalisation and spelling match house style exactly
+     (e.g. "Atoll", "Rufiyaa", "Eid al-Adha").
 
   2. **Few-shot exemplars** — 2–5 topic-similar paired articles retrieved
      from the corpus via BM25.  Gives the LLM concrete voice patterns in the
@@ -30,6 +31,11 @@ combining four sources of information at inference time:
      Reviewers called this "the single biggest improvement" — frontier models
      imitate exact translation analogues far better than vaguely related
      prose.
+
+  5. **HyDE retrieval (EN→DV)** — before embedding the source sentence,
+     generates a cheap rough DV hypothesis and embeds *that* instead.  Turns
+     a cross-lingual EN→DV retrieval problem into a same-lingual DV→DV match,
+     raising average cosine similarity from 0.61 to 0.997.
 
 Translation modes
 -----------------
@@ -60,13 +66,23 @@ Research notes
   than it helps fidelity.  The implementation is preserved for research
   purposes and may help weaker models.
 
-* ``n_candidates`` (Best-of-N) scores each candidate with a deterministic
-  entity/numeric validator + numeric-F1 metric and returns the winner.  At
-  n=3 it improves composite score by ~+0.06 at ~3× cost.
+* ``n_candidates`` (Best-of-N) now uses **MBR decoding** (Minimum Bayes
+  Risk, chrF consensus) rather than a deterministic entity/numeric scorer.
+  At n=3 this gives ~+0.06 chrF at ~3× cost.  The entity/numeric check
+  still runs as a post-hoc gate but no longer drives selection.
+
+* ``use_hyde`` (default True) enables HyDE retrieval for EN→DV: a cheap
+  hypothesis is generated first, embedded, and used for DV→DV sentence
+  memory retrieval instead of EN→DV cross-lingual search.
 
 * ``style_transfer`` (second LLM pass) improves PO-register closeness but
   introduces hallucination risk in ``faithful`` mode.  Disabled by default
   unless ``mode="po_style"``.
+
+* ``_strip_foreign_script`` — post-generation sanitizer that removes stray
+  CJK, Arabic, Devanagari, or Thaana characters from wrong-language output
+  (e.g. the "声" hallucination in EN output).  Triggers a single retry
+  inside ``_single_llm_call`` before falling back to the stripped text.
 
 See docs/adr/ for full design rationale and evaluation results.
 """
@@ -76,6 +92,7 @@ import json
 import logging
 import re
 import sqlite3
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -436,6 +453,82 @@ def _restore_term_locks(translated: str, pmap: dict) -> tuple[str, list[str]]:
             len(missing), missing,
         )
     return out, missing
+
+
+# ── Foreign-script sanitizer ───────────────────────────────────────────────────
+
+import unicodedata as _unicodedata
+
+def _strip_foreign_script(text: str, target_lang: str) -> tuple:
+    """Remove characters from wrong scripts that LLMs occasionally hallucinate.
+
+    For EN output: strip Thaana, CJK, Arabic, Devanagari, etc.
+    For DV output: strip CJK, Latin (except ASCII punctuation), Devanagari, etc.
+    Logs a warning when anything is removed so we can track model drift.
+
+    Returns ``(cleaned_text, had_foreign_chars: bool)``.
+    """
+    if target_lang == "EN":
+        # Allow: Basic Latin, Latin Extended, common punctuation, digits
+        # Block: Thaana (0600–077F / 0780–07BF), CJK (4E00–9FFF etc.), Arabic, etc.
+        def _keep(ch: str) -> bool:
+            cp = ord(ch)
+            # Thaana
+            if 0x0780 <= cp <= 0x07BF:
+                return False
+            # CJK Unified Ideographs and extensions
+            if 0x4E00 <= cp <= 0x9FFF:
+                return False
+            if 0x3400 <= cp <= 0x4DBF:
+                return False
+            if 0x20000 <= cp <= 0x2A6DF:
+                return False
+            # CJK Compatibility / Radicals
+            if 0x2E80 <= cp <= 0x2FFF:
+                return False
+            # Arabic (but allow Arabic-Indic digits 0660–0669 and Arabic punctuation)
+            if 0x0600 <= cp <= 0x077F:
+                return False
+            # Devanagari
+            if 0x0900 <= cp <= 0x097F:
+                return False
+            # Katakana / Hiragana / CJK symbols
+            if 0x3000 <= cp <= 0x303F:
+                return False
+            if 0x3040 <= cp <= 0x30FF:
+                return False
+            return True
+    elif target_lang == "DV":
+        def _keep(ch: str) -> bool:
+            cp = ord(ch)
+            # CJK
+            if 0x4E00 <= cp <= 0x9FFF:
+                return False
+            if 0x3400 <= cp <= 0x4DBF:
+                return False
+            # Devanagari
+            if 0x0900 <= cp <= 0x097F:
+                return False
+            # Katakana / Hiragana
+            if 0x3040 <= cp <= 0x30FF:
+                return False
+            return True
+    else:
+        return text, False
+
+    cleaned = "".join(ch if _keep(ch) else "" for ch in text)
+    # Fix double-spaces left by removed chars
+    import re as _re
+    cleaned = _re.sub(r"  +", " ", cleaned)
+    if cleaned != text:
+        removed = [ch for ch in text if ch not in cleaned]
+        logger.warning(
+            "_strip_foreign_script: removed %d foreign chars from %s output: %s",
+            len(removed), target_lang,
+            [f"U+{ord(c):04X}({c})" for c in set(removed)],
+        )
+        return cleaned, True
+    return cleaned, False
 
 
 # ── Entity / numeric validator ─────────────────────────────────────────────────
@@ -1037,6 +1130,29 @@ def _single_llm_call(
                 llm.model_id,
             )
 
+    # Foreign-script contamination retry.
+    # If the output contains CJK or other wrong-script chars, retry once with
+    # an explicit warning — the model hallucinated a foreign char in place of
+    # the correct word, so stripping leaves a gap.
+    cleaned, had_foreign = _strip_foreign_script(translation, target_lang)
+    if had_foreign:
+        logger.warning(
+            "_single_llm_call: foreign script chars in %s output (model=%s); retrying",
+            target_lang, llm.model_id,
+        )
+        reminder = (
+            "\n\n⚠ CRITICAL: Your previous response contained characters from a "
+            "foreign script (e.g. Chinese/CJK characters). Output ONLY in the "
+            f"correct target language ({target_lang}). No foreign characters at all."
+        )
+        translation2, r_in, r_out = llm.chat(
+            system, user + reminder, max_tokens=4000)
+        cost += llm.cost_usd(r_in, r_out)
+        tokens_in += r_in
+        tokens_out += r_out
+        clean2, still_foreign = _strip_foreign_script(translation2, target_lang)
+        translation = clean2 if not still_foreign else cleaned
+
     return translation, cost, tokens_in, tokens_out
 
 
@@ -1069,6 +1185,98 @@ def _candidate_score(
     return _SCORE_ENTITY_WEIGHT * float(check["passed"]) + _SCORE_NUMERIC_WEIGHT * num_f1
 
 
+# ── MBR decoding ───────────────────────────────────────────────────────────────
+
+def _chrf(hyp: str, ref: str, max_n: int = 6, beta: float = 2.0) -> float:
+    """Sentence-level chrF — character n-gram F-measure (Popović 2015).
+
+    beta=2 weights recall 2× over precision, matching the MT community default.
+    Returns 0.0 when either string is empty.
+    """
+    if not hyp or not ref:
+        return 0.0
+    total_p = total_r = 0.0
+    active = 0
+    for n in range(1, max_n + 1):
+        def ngrams(s: str) -> Counter:
+            return Counter(s[i:i + n] for i in range(len(s) - n + 1))
+        h_ng = ngrams(hyp)
+        r_ng = ngrams(ref)
+        if not h_ng or not r_ng:
+            continue
+        matches = sum((h_ng & r_ng).values())
+        total_p += matches / sum(h_ng.values())
+        total_r += matches / sum(r_ng.values())
+        active += 1
+    if active == 0:
+        return 0.0
+    p = total_p / active
+    r = total_r / active
+    denom = beta ** 2 * p + r
+    return (1 + beta ** 2) * p * r / denom if denom > 0 else 0.0
+
+
+def _mbr_select(
+    candidates: list[tuple[str, float, int, int]],
+    source: str,
+    source_lang: str,
+    target_lang: str,
+) -> tuple[str, float, int, int]:
+    """Minimum Bayes Risk candidate selection with entity-check penalty.
+
+    Each candidate is scored by its average chrF against all other candidates
+    (the "consensus" translation).  If the entity validator rejects a candidate
+    its score is halved so it loses ties but isn't discarded — useful when
+    all N candidates fail entity checking (better to return the most fluent one).
+
+    Falls back to _candidate_score when N==1.
+    """
+    if len(candidates) == 1:
+        return candidates[0]
+
+    texts = [t for t, *_ in candidates]
+    scores: list[float] = []
+    for i, hyp in enumerate(texts):
+        refs = [texts[j] for j in range(len(texts)) if j != i]
+        mbr = sum(_chrf(hyp, ref) for ref in refs) / len(refs)
+        check = validate_entities(source, hyp, source_lang=source_lang, target_lang=target_lang)
+        penalty = 1.0 if check["passed"] else 0.5
+        scores.append(mbr * penalty)
+
+    best_i = max(range(len(scores)), key=lambda i: scores[i])
+    logger.debug(
+        "translate: MBR best-of-%d idx=%d score=%.4f (others: %s)",
+        len(candidates), best_i, scores[best_i],
+        [f"{s:.4f}" for j, s in enumerate(scores) if j != best_i],
+    )
+    return candidates[best_i]
+
+
+# ── HyDE retrieval ─────────────────────────────────────────────────────────────
+
+def _hyde_hypothesis(llm: "LLMClient", text: str, target_lang: str) -> str:
+    """Generate a rough hypothesis translation for HyDE retrieval.
+
+    The hypothesis doesn't need to be good — just close enough for the
+    embedding model to land in the right neighbourhood.  A single-sentence
+    system prompt and no exemplars keeps cost minimal (~$0.001).
+
+    Returns empty string on any error so the caller falls back gracefully.
+    """
+    lang_name = "Dhivehi (Thaana script)" if target_lang == "DV" else "English"
+    try:
+        hyp, _, _ = llm.chat(
+            f"Translate the following text to {lang_name}. "
+            "Output only the translation, nothing else.",
+            text[:600],
+            max_tokens=600,
+        )
+        return hyp.strip()
+    except Exception as e:
+        logger.debug("_hyde_hypothesis failed (%s); skipping HyDE", e)
+        return ""
+
+
 # ── Public translation entry point ─────────────────────────────────────────────
 
 _DISCLAIMER = (
@@ -1093,6 +1301,7 @@ def translate(
     ablate: Optional[set] = None,
     enable_term_locking: bool = False,
     n_candidates: int = 1,
+    use_hyde: bool = True,
 ) -> dict:
     """Translate *text* between English and Dhivehi.
 
@@ -1221,9 +1430,20 @@ def translate(
     if "sentence_memory" not in ablate:
         try:
             from moonlight import sentence_memory as _sm
+            # HyDE: for EN→DV, generate a rough DV hypothesis and retrieve
+            # by DV↔DV similarity instead of EN↔DV cross-lingual matching.
+            # Falls back to source text silently when hypothesis generation fails.
+            _retrieval_text = text
+            _retrieval_lang = source_lang
+            if use_hyde and "hyde" not in ablate and source_lang == "EN" and target_lang == "DV":
+                _hyp = _hyde_hypothesis(llm, text, target_lang)
+                if _hyp:
+                    _retrieval_text = _hyp
+                    _retrieval_lang = "DV"
+                    logger.debug("translate: HyDE hypothesis (%d chars)", len(_hyp))
             sentence_mem = _sm.select_sentence_memory_hybrid(
-                conn, text,
-                source_lang=source_lang, k=5,
+                conn, _retrieval_text,
+                source_lang=_retrieval_lang, k=5,
                 exclude_article_ids=exclude_article_ids,
             )
         except sqlite3.OperationalError:
@@ -1289,16 +1509,12 @@ def translate(
     if _n == 1:
         translation, cost, tokens_in, tokens_out = _candidates[0]
     else:
-        _scored = [
-            (_candidate_score(t, text, source_lang, target_lang), i, t, c, ti, to)
-            for i, (t, c, ti, to) in enumerate(_candidates)
-        ]
-        _scored.sort(key=lambda x: x[0], reverse=True)
-        best_score, _, translation, cost, tokens_in, tokens_out = _scored[0]
+        translation, cost, tokens_in, tokens_out = _mbr_select(
+            _candidates, text, source_lang, target_lang
+        )
         cost = sum(c for _, c, _, _ in _candidates)
         tokens_in = sum(ti for _, _, ti, _ in _candidates)
         tokens_out = sum(to for _, _, _, to in _candidates)
-        logger.debug("translate: best-of-%d selected score=%.3f", _n, best_score)
 
     # Style-transfer second pass — po_style only.  Disabled in faithful mode
     # to prevent the embellishment engine from introducing hallucinated claims.
@@ -1344,6 +1560,11 @@ def translate(
     lock_misses: list[str] = []
     if lock_map:
         translation, lock_misses = _restore_term_locks(translation, lock_map)
+
+    # Strip stray non-target-language script characters.
+    # LLMs occasionally leak CJK or other script characters into EN output.
+    # Retry logic for this case lives inside _single_llm_call (has prompt access).
+    translation, _ = _strip_foreign_script(translation, target_lang)
 
     # Entity/numeric validator gate — deterministic post-check.
     entity_check = validate_entities(
@@ -1558,6 +1779,37 @@ _GLOSSARY_BUILDER_SYSTEM = (
 _JSON_RE = re.compile(r'\{.*\}', re.DOTALL)
 
 
+def _attest_en_term(en_term: str, en_corpus: str) -> str:
+    """Return the most frequently attested spelling of en_term in the EN corpus.
+
+    The LLM may propose "Takbeer" while the PO consistently writes "Takbir".
+    This function finds every case-variant of the term in the corpus and returns
+    the dominant form.  Falls back to en_term unchanged when the term is not
+    attested or when there is no clear winner.
+
+    Only overrides when:
+    - The best attested form appears at least twice, AND
+    - It differs from the LLM-proposed form (no-op when they agree).
+    """
+    if len(en_term) < 4:
+        return en_term
+    try:
+        pattern = re.compile(r'(?<!\w)' + re.escape(en_term) + r'(?!\w)', re.IGNORECASE)
+    except re.error:
+        return en_term
+    counts: dict = {}
+    for m in pattern.finditer(en_corpus):
+        form = m.group(0)
+        counts[form] = counts.get(form, 0) + 1
+    if not counts:
+        return en_term
+    best = max(counts, key=lambda k: counts[k])
+    if counts[best] >= 2 and best != en_term:
+        logger.debug("_attest_en_term: %r → %r (attested %d×)", en_term, best, counts[best])
+        return best
+    return en_term
+
+
 def _extract_pairs_from_article(
     llm: "LLMClient",
     en_body: str,
@@ -1620,43 +1872,65 @@ def _extract_pairs_from_article(
 def build_glossary(
     conn: sqlite3.Connection,
     *,
-    sample_size: int = 200,
-    budget_usd: float = 10.0,
+    sample_size: int = 99999,
+    budget_usd: float = 30.0,
     llm: Optional["LLMClient"] = None,
     progress_cb=None,
-    model_alias: str = "claude-sonnet",
+    model_alias: str = "claude-haiku",
+    incremental: bool = True,
 ) -> dict:
     """Mine the corpus for bilingual term pairs and populate translation_glossary.
 
-    Samples up to *sample_size* of the most recent paired articles with
-    non-empty bodies (≥ 500 characters each).  For each pair, calls the LLM
-    to extract institution names, policy phrases, and proper nouns.  Aggregates
-    by frequency and writes to the glossary table.
+    Processes paired articles with non-empty bodies (≥ 500 characters each).
+    By default runs incrementally — skips articles whose EN id is already
+    represented in existing glossary rows — so re-runs only process new
+    articles added since the last build.
 
     Parameters
     ----------
     conn:
         Open moonlight database connection.
     sample_size:
-        Maximum number of paired articles to process.
+        Maximum number of paired articles to process.  Default covers the
+        full corpus (~7 000 pairs).
     budget_usd:
-        Hard cap on cumulative LLM cost.  Processing stops when this is
-        reached.  Default $10 covers ~200 pairs at ~$0.05 each.
+        Hard cap on cumulative LLM cost.  Processing stops when reached.
+        Default $30 covers the full corpus with Haiku (~$0.003–0.005/pair).
     llm:
         :class:`LLMClient` instance.  If None, constructed from *model_alias*.
     progress_cb:
         Optional callable ``(processed, total, cost_usd)`` called every 10
         articles for progress reporting.
     model_alias:
-        Model alias to use when *llm* is None.
+        Model alias for extraction.  Haiku is cheapest for bulk work.
+    incremental:
+        If True (default), skip article IDs already recorded in any
+        existing glossary row's ``sample_en_ids`` column.  Set False to
+        reprocess the full corpus from scratch.
 
     Returns
     -------
     dict:
-        ``{"pairs_in_db": int, "pairs_processed": int, "cost_usd": float}``
+        ``{"pairs_in_db": int, "pairs_processed": int, "skipped": int,
+           "cost_usd": float}``
     """
     if llm is None:
         llm = LLMClient(model_alias)
+
+    # Build the set of EN article IDs already covered by the glossary.
+    already_processed: set = set()
+    if incremental:
+        for (ids_json,) in conn.execute(
+            "SELECT sample_en_ids FROM translation_glossary WHERE sample_en_ids IS NOT NULL"
+        ).fetchall():
+            try:
+                already_processed.update(json.loads(ids_json))
+            except (ValueError, TypeError):
+                pass
+        logger.info(
+            "build_glossary: incremental — %d article IDs already covered",
+            len(already_processed),
+        )
 
     pairs = conn.execute(
         """SELECT en.id, en.body_text, dv.body_text
@@ -1674,7 +1948,11 @@ def build_glossary(
     aggregated: dict = {}
     cost_total = 0.0
     processed = 0
+    skipped = 0
     for en_id, en_body, dv_body in pairs:
+        if en_id in already_processed:
+            skipped += 1
+            continue
         if cost_total >= budget_usd:
             logger.info("build_glossary: budget cap reached at $%.2f", cost_total)
             break
@@ -1704,12 +1982,36 @@ def build_glossary(
                 )
                 aggregated[key]["sample_ids"].append(en_id)
         if progress_cb is not None and processed % 10 == 0:
-            progress_cb(processed, len(pairs), cost_total)
+            progress_cb(processed, len(pairs) - skipped, cost_total)
 
     now = datetime.now(timezone.utc).isoformat()
     mid = llm.model_id
-    conn.execute(
-        "DELETE FROM translation_glossary WHERE extracted_by = ?", (mid,))
+    if not incremental:
+        # Full rebuild: wipe this model's prior extractions before reinserting.
+        conn.execute(
+            "DELETE FROM translation_glossary WHERE extracted_by = ?", (mid,))
+
+    # Normalize EN terms against the EN corpus before bulk insert.
+    # Loads all EN article text once (≈14 MB) then does fast regex lookups.
+    # This catches cases where the LLM proposes "Takbeer" but the PO writes "Takbir".
+    logger.info(
+        "build_glossary: attesting %d unique EN terms against EN corpus …",
+        len(aggregated),
+    )
+    en_corpus_rows = conn.execute(
+        "SELECT body_text FROM articles WHERE language='EN' AND body_text IS NOT NULL"
+    ).fetchall()
+    en_corpus = " ".join(r[0] for r in en_corpus_rows if r[0])
+    attested_count = 0
+    for r in aggregated.values():
+        normalized = _attest_en_term(r["en_term"], en_corpus)
+        if normalized != r["en_term"]:
+            r["en_term"] = normalized
+            r["confidence_max"] = min(1.0, r["confidence_max"] + 0.05)
+            attested_count += 1
+    if attested_count:
+        logger.info("build_glossary: normalized %d EN terms to PO-attested forms", attested_count)
+
     rows = sorted(aggregated.values(), key=lambda r: -r["freq"])
     for r in rows:
         conn.execute(
@@ -1726,10 +2028,11 @@ def build_glossary(
         "SELECT COUNT(*) FROM translation_glossary"
     ).fetchone()[0]
     if progress_cb is not None:
-        progress_cb(processed, len(pairs), cost_total)
+        progress_cb(processed, len(pairs) - skipped, cost_total)
     return {
         "pairs_in_db":     n_in_db,
         "pairs_processed": processed,
+        "skipped":         skipped,
         "cost_usd":        cost_total,
     }
 

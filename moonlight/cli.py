@@ -6,11 +6,19 @@ Entry point: ``moonlight`` (registered in pyproject.toml).
 Commands
 --------
 translate TEXT          Translate a single string (auto-detects source language)
-build-glossary          Mine the corpus for bilingual term pairs
+build-glossary          Mine the corpus for bilingual term pairs (incremental by default)
 build-place-names       Download GeoNames MV data and populate place_names table
 build-embeddings        Backfill sentence-level embeddings (requires [embeddings] extra)
 db-init                 Initialise (or migrate) the moonlight database
 db-stats                Show corpus statistics
+models                  List all available models with provider and pricing
+
+build-glossary flags
+--------------------
+--model gemini-flash    Cheapest option (~$0.0003/pair, 20× cheaper than Haiku)
+--budget 10             USD cap per run (default 30; full corpus costs ~$2 with Flash)
+--full-rebuild          Reprocess all pairs from scratch instead of skipping covered ones
+--sample N              Limit to N pairs (default: entire corpus)
 """
 from __future__ import annotations
 
@@ -147,18 +155,22 @@ def translate(
 
 @cli.command("build-glossary")
 @click.option(
-    "--sample", default=200, type=int, show_default=True,
-    help="Number of most-recent paired articles to sample.",
+    "--sample", default=99999, type=int, show_default=True,
+    help="Max paired articles to process (default: entire corpus).",
 )
 @click.option(
-    "--budget", default=10.0, type=float, show_default=True,
+    "--budget", default=30.0, type=float, show_default=True,
     help="Maximum USD to spend on LLM calls.",
 )
 @click.option(
-    "--model", default="claude-sonnet",
+    "--model", default="claude-haiku",
     type=click.Choice(_MODEL_CHOICES),
     show_default=True,
-    help="Model alias.  Haiku/qwen-turbo/gemini-flash are cheapest for bulk extraction.",
+    help="Model alias.  Haiku is cheapest for bulk extraction (~$0.003/pair).",
+)
+@click.option(
+    "--full-rebuild", is_flag=True, default=False,
+    help="Reprocess ALL pairs from scratch instead of skipping already-covered articles.",
 )
 @click.pass_context
 def build_glossary(
@@ -166,15 +178,16 @@ def build_glossary(
     sample: int,
     budget: float,
     model: str,
+    full_rebuild: bool,
 ) -> None:
-    """Mine the corpus for bilingual term pairs and populate translation_glossary.
+    """Mine the full corpus for bilingual term pairs and populate translation_glossary.
 
-    Samples the most-recent paired articles, calls the LLM to extract
-    institution names and policy phrases, aggregates by frequency, and writes
-    to the glossary table.  Existing LLM-extracted rows are replaced; manual
-    entries (extracted_by='manual') are preserved.
+    By default runs incrementally — only processes article pairs not yet
+    represented in the glossary, so re-runs are cheap and fast.
 
-    Cost: ~$0.05 per article pair.  Default budget covers ~200 pairs.
+    Use --full-rebuild to reprocess everything from scratch.
+
+    Cost: ~$0.003–0.005 per pair with Haiku. Full corpus (~7 000 pairs) ≈ $20–35.
     """
     from moonlight.translator import build_glossary as _build_glossary
 
@@ -182,7 +195,7 @@ def build_glossary(
 
     def _progress(processed: int, total: int, cost: float) -> None:
         click.echo(
-            f"\r  {processed}/{total} articles  ${cost:.2f}",
+            f"\r  {processed}/{total} articles  ${cost:.3f}",
             nl=False, err=True,
         )
 
@@ -193,6 +206,7 @@ def build_glossary(
             budget_usd=budget,
             progress_cb=_progress,
             model_alias=model,
+            incremental=not full_rebuild,
         )
     except Exception as exc:
         click.echo(f"\nError: {exc}", err=True)
@@ -202,9 +216,10 @@ def build_glossary(
 
     click.echo()
     click.echo(
-        f"Done — {result['pairs_processed']} articles processed, "
-        f"{result['pairs_in_db']} pairs in glossary, "
-        f"${result['cost_usd']:.2f} spent."
+        f"Done — {result['pairs_processed']} new articles processed "
+        f"({result.get('skipped', 0)} already covered), "
+        f"{result['pairs_in_db']} total pairs in glossary, "
+        f"${result['cost_usd']:.3f} spent."
     )
 
 
